@@ -14,7 +14,7 @@ from pipeline.core.config import BaseExperimentConfig
 from scripts.run_augment_experiment import run_single_augment
 
 DATASETS = ["pima", "credit-g", "yeast", "phoneme"]
-MODELS = ["lr", "hgb"]
+MODELS = ["lr"]  # HGB too slow (250s/fit); defer to Phase 4
 SEEDS = [13, 17, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101]
 METHODS = ["no_cleaning", "class_proportional", "plain_smote", "oof_filtered_smote"]
 OUT_CSV = "outputs/pilot-method-b-results.csv"

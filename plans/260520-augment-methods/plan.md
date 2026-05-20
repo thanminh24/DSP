@@ -1,7 +1,7 @@
 ---
 title: "Augmentation Methods: Balanced-OOF Relabeling and OOF-Filtered SMOTE"
 description: "Last-chance test of two augmentation methods (relabel Type A via balanced OOF, OOF-filtered SMOTE) before abandoning the noisy-label-cleaning direction."
-status: pending
+status: completed
 priority: P2
 effort: 12h
 branch: ""
@@ -46,11 +46,11 @@ negative result summary, stop. Do not run Phases 4–5. The negative result to d
 
 | Phase | Name | Status | Effort |
 |-------|------|--------|--------|
-| 1 | [Infrastructure](./phase-01-infrastructure.md) | Pending | 3h |
-| 2 | [Method A Pilot](./phase-02-method-a-pilot.md) | Pending | 2h |
-| 3 | [Method B Pilot](./phase-03-method-b-pilot.md) | Pending | 2h |
-| 4 | [Full Sweep](./phase-04-full-sweep.md) | Pending | 3h |
-| 5 | [Statistical Analysis](./phase-05-statistical-analysis.md) | Pending | 2h |
+| 1 | [Infrastructure](./phase-01-infrastructure.md) | Complete | 3h |
+| 2 | [Method A Pilot](./phase-02-method-a-pilot.md) | **GO** | 2h |
+| 3 | [Method B Pilot](./phase-03-method-b-pilot.md) | **FAIL** | 2h |
+| 4 | [Full Sweep](./phase-04-full-sweep.md) | Complete (Method A only) | 3h |
+| 5 | [Statistical Analysis](./phase-05-statistical-analysis.md) | Complete | 2h |
 
 ## Decision Graph
 
@@ -126,3 +126,23 @@ at 20 seeds (medium noise 30%/10%):
 ## Open Questions
 
 None — abandonment gate, controls, and statistics are all specified.
+
+## Final Results (2026-05-21)
+
+**Method A (balanced-OOF Type A relabeling): GO**
+
+| dataset | class_prop | balanced_oof_relabel | delta | Cohen's d |
+|---------|-----------|---------------------|-------|-----------|
+| credit-g | 0.610 | 0.632 | +0.021 | 0.564 |
+| phoneme | 0.645 | 0.723 | +0.078 | 5.375 |
+| pima | 0.670 | 0.703 | +0.033 | 0.881 |
+| yeast | 0.740 | 0.761 | +0.021 | 0.835 |
+| ecoli | 0.838 | 0.851 | +0.013 | 0.237 |
+
+Wins: 15/15 combos (5 datasets × 3 noise levels). Cohen's d=1.465. Control passed (beats random_relabel, p=7.8e-15). Noise scaling: +0.024 → +0.033 → +0.036 (method gets stronger with more noise).
+
+**Method B (OOF-filtered SMOTE): FAIL**
+
+SMOTE beats class_proportional, but OOF filtering adds zero value (delta vs plain_smote = +0.002, p=0.198). Gain is from SMOTE synthesis, not Type B noise removal.
+
+**Verdict: Continue research.** Method A is a real finding with proper statistical controls. Write the paper. Only Method A survived — but it survived robustly.

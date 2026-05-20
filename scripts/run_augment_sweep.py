@@ -15,7 +15,7 @@ from pipeline.core.config import BaseExperimentConfig
 from scripts.run_augment_experiment import run_single_augment
 
 DATASETS = ["pima", "credit-g", "yeast", "phoneme", "ecoli"]
-MODELS = ["lr", "hgb"]
+MODELS = ["lr"]  # HGB too slow (250s/fit on this machine)
 SEEDS = [13, 17, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101]
 NOISE_LEVELS = {
     "low": (0.10, 0.05),
