@@ -14,6 +14,7 @@ from sklearn.pipeline import Pipeline, make_pipeline
 from sklearn.preprocessing import StandardScaler
 
 from pipeline.core.config import BaseExperimentConfig
+from pipeline.data.encoding import encode_train_test
 from pipeline.data.loaders import load_dataset, induce_imbalance, inject_noise
 from pipeline.scoring.oof_loss import out_of_fold_loss
 from pipeline.scoring.balanced_oof import balanced_oof_majority_scores
@@ -22,18 +23,6 @@ from pipeline.augmentation.relabeling import relabel_typeA, random_relabeling
 from pipeline.augmentation.filtered_smote import filtered_smote_augment, plain_smote_augment
 from pipeline.evaluation.metrics import evaluate
 from pipeline.evaluation.augment_metrics import evaluate_augmented
-
-
-def _encode_dataframe(X_df, cat_cols):
-    X = X_df.copy()
-    cat_indices = []
-    for col in cat_cols:
-        cat_indices.append(list(X.columns).index(col))
-        if hasattr(X[col], "cat"):
-            X[col] = X[col].cat.codes.astype(float)
-        else:
-            X[col] = X[col].astype("category").cat.codes.astype(float)
-    return X.to_numpy(dtype=float), cat_indices
 
 
 def _make_std_factory(model_name, cat_indices, seed):
@@ -104,8 +93,7 @@ def run_single_augment(
         target_ratio=cfg.target_minority_ratio, rng=rng,
     )
 
-    X_tr, cat_indices = _encode_dataframe(X_tr_df, cat_cols)
-    X_te, _ = _encode_dataframe(X_te_df, cat_cols)
+    X_tr, X_te, cat_indices = encode_train_test(X_tr_df, X_te_df, cat_cols)
 
     y_noisy, noisy_mask = inject_noise(
         y_tr, minority_label=minority_label,

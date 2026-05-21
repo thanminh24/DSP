@@ -12,6 +12,7 @@ from sklearn.pipeline import Pipeline, make_pipeline
 from sklearn.preprocessing import StandardScaler
 
 from pipeline.core.config import BaseExperimentConfig, LAMBDA_NAMES
+from pipeline.data.encoding import encode_train_test
 from pipeline.data.loaders import load_dataset, induce_imbalance, inject_noise
 from pipeline.scoring.oof_loss import out_of_fold_loss
 from pipeline.cleaning.selectors import (
@@ -24,19 +25,6 @@ from pipeline.cleaning.selectors import (
     select_crcc_m,
 )
 from pipeline.evaluation.metrics import evaluate
-
-
-def _encode_dataframe(X_df: pd.DataFrame, cat_cols: list[str]) -> tuple[np.ndarray, list[int]]:
-    """Encode categorical columns to numeric, return (X_numpy, cat_indices)."""
-    X = X_df.copy()
-    cat_indices: list[int] = []
-    for col in cat_cols:
-        cat_indices.append(list(X.columns).index(col))
-        if hasattr(X[col], "cat"):
-            X[col] = X[col].cat.codes.astype(float)
-        else:
-            X[col] = X[col].astype("category").cat.codes.astype(float)
-    return X.to_numpy(dtype=float), cat_indices
 
 
 def _make_lr_factory(seed: int):
@@ -100,8 +88,7 @@ def run_single(
         target_ratio=cfg.target_minority_ratio, rng=rng,
     )
 
-    X_tr, cat_indices = _encode_dataframe(X_train_imb, cat_cols)
-    X_te, _ = _encode_dataframe(X_test_df, cat_cols)
+    X_tr, X_te, cat_indices = encode_train_test(X_train_imb, X_test_df, cat_cols)
 
     y_noisy, noisy_mask = inject_noise(
         y_train_imb, minority_label=minority_label,
