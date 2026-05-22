@@ -52,8 +52,8 @@ Before this can become a paper, three things need to happen:
 | 1 | [Literature Gap Audit](./phase-01-literature-gap-audit-2020-2025-q1-q2-a-a.md) | **Completed** | ~2h | none |
 | 2 | [Code Audit and Prune](./phase-02-code-audit-and-prune.md) | **Completed** | ~1h | none |
 | 3 | [Method Hardening](./phase-03-method-hardening-from-research.md) | **Completed** (Case A, patches 2+3) | ~2h | Phase 1 |
-| 4 | [Deep Sweep + Analysis](./phase-04-deep-sweep-and-statistical-analysis.md) | **In Progress** (3506/4200 rows) | ~3h compute | Phase 3 |
-| 5 | [Paper Packaging](./phase-05-paper-packaging.md) | Pending | ~3h writing | Phase 4 |
+| 4 | [Deep Sweep + Analysis](./phase-04-deep-sweep-and-statistical-analysis.md) | **Completed** (4350 rows) | ~3h compute | Phase 3 |
+| 5 | [Paper Packaging](./phase-05-paper-packaging.md) | **In Progress** (draft done) | ~3h writing | Phase 4 |
 
 Phases 1 and 2 are independent — run in parallel.
 Phase 3 depends on Phase 1 findings.

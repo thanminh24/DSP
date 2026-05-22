@@ -1,7 +1,7 @@
 ---
 phase: 5
 title: "Paper Packaging"
-status: pending
+status: in-progress
 priority: P1
 effort: "~3h writing"
 dependencies: [4]

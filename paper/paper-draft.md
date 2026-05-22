@@ -278,33 +278,37 @@ weighted F1. 10 seeds × 5 datasets = 50 runs per model-method pair.
 | Metric | cwms_msbs | class_proportional | no_cleaning | Δ cwms_msbs vs cp |
 |--------|-----------|--------------------|---------|--------------------|
 | Balanced accuracy | 0.7454 | 0.7032 | 0.5660 | **+4.22pp** |
-| Accuracy | 0.7197 | 0.7878 | 0.7651 | −6.81pp |
-| Macro F1 | 0.7360 | 0.6906 | 0.5509 | **+4.54pp** |
-| Minority recall | 0.7313 (ex.) | 0.5091 | 0.2709 | **+22.22pp** |
-| Minority precision | 0.4843 | 0.6291 | 0.6453 | −14.48pp |
+| Accuracy | 0.7197 | 0.7878 | 0.6829 | −6.81pp |
+| Minority recall | 0.7175 | 0.5016 | 0.1390 | **+21.59pp** |
+| Minority precision | 0.5312 | 0.6435 | 0.7583 | −11.23pp |
+| Weighted F1 | 0.7675 | 0.7801 | 0.6829 | −1.26pp |
 
 *LR pima seed=13 (representative): cwms_msbs=0.7617, cp=0.6519, shuffled=0.7150.*  
-*Note: recall gain vs precision tradeoff is expected (synthesis increases boundary coverage).*
+*Recall gain with precision tradeoff is expected: synthesis increases boundary coverage*
+*at the cost of some majority-class precision.*
 
-### Table 4 — Shuffled Ablation (LR, medium)
+### Table 4 — Shuffled Ablation (LR, medium and low protocols)
 
-| Method | BA | Δ vs cwms_msbs | Win% cwms_msbs over shuf | p |
-|--------|----|----|---|---|
-| cwms_msbs | 0.7454 | — | 78% (39/50) | — |
-| cwms_msbs_shuffled | 0.7216 | **−2.38pp** | — | **5.4×10⁻⁶** |
+| Protocol | cwms_msbs | cwms_msbs_shuffled | Δ | p |
+|----------|-----------|--------------------|---|---|
+| hidden_minority_low | 0.7604 | 0.7331 | **+2.73pp** | **9.2×10⁻⁷** |
+| hidden_minority_medium | 0.7454 | 0.7216 | **+2.38pp** | **5.5×10⁻⁶** |
+| hidden_minority_high | 0.7124 | 0.7166 | −0.42pp | 0.255 (n.s.) |
 
-*OOF confidence scores provide 2.38pp above equivalent random weighting.*  
-*Confirms the mechanism: OOF scores are load-bearing, not just sample_weight ≠ 1.*
+*Low and medium: OOF scores are load-bearing above random weighting.*  
+*High (ε_mn=0.40): ablation inconclusive — OOF quality degrades when 40% of minority is*
+*mislabeled, causing the scorer itself to be confused. See limitations (Section 7.4).*
 
 ### Table 5 — Cross-Protocol Robustness (LR only)
 
-| Protocol | ε_mn | cwms_msbs | class_proportional | Δ |
-|----------|------|-----------|--------------------|----|
-| hidden_minority_low | 0.10 | 0.7604 | 0.7278 | **+3.26pp** |
-| hidden_minority_medium | 0.30 | 0.7454 | 0.7032 | **+4.22pp** |
-| hidden_minority_high | 0.40 | 0.7124 | 0.6830 | **+2.94pp** |
+| Protocol | ε_mn | cwms_msbs | class_proportional | Δ | p | Wins |
+|----------|------|-----------|--------------------|----|---|------|
+| hidden_minority_low | 0.10 | 0.7604 ± 0.071 | 0.7278 ± 0.085 | **+3.26pp** | 9.6×10⁻⁷ | 82% |
+| hidden_minority_medium | 0.30 | 0.7454 ± 0.079 | 0.7032 ± 0.096 | **+4.22pp** | 6.2×10⁻⁷ | 82% |
+| hidden_minority_high | 0.40 | 0.7124 ± 0.083 | 0.6830 ± 0.086 | **+2.94pp** | 1.1×10⁻⁴ | 64% |
 
-*Consistent improvement across all contamination levels.*
+*Consistent improvement vs class_proportional across all contamination levels.*  
+*Win rate decreases at high noise (64% vs 82%) — expected when OOF scorer is itself noisy.*
 
 ---
 
@@ -348,7 +352,11 @@ paper main results and explain this mechanistically.
 
 1. **Same-family OOF scorer**: The balanced OOF scorer and the final model use the same
    model family. The shuffled ablation (Table 4) confirms scores are non-trivially
-   load-bearing (p=5.4×10⁻⁶ above shuffled), mitigating the circularity concern.
+   load-bearing at low and medium noise (p≤5.5×10⁻⁶ above shuffled). At high noise
+   (ε_mn=0.40) the ablation becomes inconclusive (p=0.255): when 40% of minority is
+   mislabeled, the OOF scorer itself is contaminated, reducing score discriminativeness.
+   The method still benefits over class_proportional at high noise (+2.94pp, p=1.1×10⁻⁴),
+   but the mechanism argument weakens at this extreme.
    
 2. **Budget definition**: B is defined as budget × N_train. With high ε_mn, the true
    noisy pool may be smaller, causing the budget to exceed the noisy sample count.
