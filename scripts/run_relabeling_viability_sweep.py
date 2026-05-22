@@ -326,7 +326,7 @@ def _run_method(method, X_tr, y_noisy, y_tr, noisy_mask, X_te, y_te, factory,
             return evaluate_augmented(X_tr, y_noisy, X_te, y_te,
                                        factory, min_label, sample_weight=sw)
     if method in ("cwms_msbs", "cwms_msbs_shuffled"):
-        if model_name == "calibrated_lr":
+        if model_name in ("calibrated_lr", "xgboost"):
             return _nan_skip_row()
         scores_for_method = bal_scores.copy()
         if method == "cwms_msbs_shuffled":
