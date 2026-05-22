@@ -1,7 +1,7 @@
 ---
 phase: 4
 title: "Deep Sweep and Statistical Analysis"
-status: pending
+status: in-progress
 priority: P1
 effort: "~3h compute + 30m analysis"
 dependencies: [3]

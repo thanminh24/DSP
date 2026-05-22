@@ -1,7 +1,7 @@
 ---
 title: "CWMS+MSBS: Gap Validation, Code Prune, Method Hardening, Paper"
 description: "End-to-end plan to take CWMS+MSBS from an empirical finding to a standalone paper: rigorous gap audit against Q1/Q2 A*/A venues (2020-2025), code pruning, method patching based on research, final deep sweep, and paper write-up."
-status: pending
+status: in-progress
 priority: P1
 branch: "master"
 tags: ["cwms-msbs", "paper", "gap-audit", "literature", "deep-sweep"]
@@ -49,10 +49,10 @@ Before this can become a paper, three things need to happen:
 
 | Phase | Name | Status | Effort | Blocker |
 |-------|------|--------|--------|---------|
-| 1 | [Literature Gap Audit](./phase-01-literature-gap-audit-2020-2025-q1-q2-a-a.md) | Pending | ~2h | none |
-| 2 | [Code Audit and Prune](./phase-02-code-audit-and-prune.md) | Pending | ~1h | none |
-| 3 | [Method Hardening](./phase-03-method-hardening-from-research.md) | Pending | ~2h | Phase 1 |
-| 4 | [Deep Sweep + Analysis](./phase-04-deep-sweep-and-statistical-analysis.md) | Pending | ~3h compute | Phase 3 |
+| 1 | [Literature Gap Audit](./phase-01-literature-gap-audit-2020-2025-q1-q2-a-a.md) | **Completed** | ~2h | none |
+| 2 | [Code Audit and Prune](./phase-02-code-audit-and-prune.md) | **Completed** | ~1h | none |
+| 3 | [Method Hardening](./phase-03-method-hardening-from-research.md) | **Completed** (Case A, patches 2+3) | ~2h | Phase 1 |
+| 4 | [Deep Sweep + Analysis](./phase-04-deep-sweep-and-statistical-analysis.md) | **In Progress** (3506/4200 rows) | ~3h compute | Phase 3 |
 | 5 | [Paper Packaging](./phase-05-paper-packaging.md) | Pending | ~3h writing | Phase 4 |
 
 Phases 1 and 2 are independent — run in parallel.
