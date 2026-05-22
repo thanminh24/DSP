@@ -62,6 +62,34 @@ def weighted_oof_majority_scores(
     return probs
 
 
+def naive_confidence_majority_scores(
+    X: np.ndarray,
+    y_noisy: np.ndarray,
+    model_factory: Callable,
+    minority_label: int,
+    majority_label: int,
+    seed: int = 42,
+    use_sample_weight: bool = False,
+) -> np.ndarray:
+    """P(minority|x) for majority-labeled samples trained on the FULL dataset (no OOF).
+
+    Confirmation-bias baseline: the scoring model sees every sample it scores during
+    training. Comparing this to balanced_oof_relabel directly measures how much OOF
+    prevents the 'Two Wrongs Don't Make a Right' failure mode.
+    """
+    model = model_factory()
+    if use_sample_weight:
+        sw = compute_sample_weight("balanced", y_noisy)
+        model.fit(X, y_noisy, **_fit_kwargs(model, sw))
+    else:
+        model.fit(X, y_noisy)
+    classes = list(model.classes_)
+    min_col = classes.index(minority_label)
+    probs = model.predict_proba(X)[:, min_col]
+    probs[y_noisy == minority_label] = np.nan
+    return probs
+
+
 def select_confidence_relabels(
     y_noisy: np.ndarray,
     scores: np.ndarray,

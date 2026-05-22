@@ -31,8 +31,15 @@ def list_publication_models(include_optional: bool = True) -> list[str]:
 
 
 def model_supports_sample_weight(model_name: str) -> bool:
-    """Whether balanced OOF should pass explicit sample weights."""
-    return model_name == "hgb"
+    """Whether balanced OOF should pass explicit sample weights.
+
+    HGB: no class_weight param — must use sample_weight in fit().
+    XGBoost: class_weight param doesn't exist; scale_pos_weight shifts the decision
+    boundary globally but doesn't produce calibrated P(minority|x) scores suitable
+    for ranking. Passing sample_weight gives proper per-sample loss reweighting and
+    makes the balanced scoring model meaningfully different from the standard one.
+    """
+    return model_name in ("hgb", "xgboost")
 
 
 def make_model_factory(
@@ -40,6 +47,8 @@ def make_model_factory(
     seed: int,
     cat_indices: list[int] | None = None,
     balanced: bool = False,
+    scale_pos_weight: float = 1.0,
+    use_gpu: bool = False,
 ) -> ModelFactory:
     """Create a fresh sklearn-compatible estimator on every call."""
     cat_indices = cat_indices or []
@@ -59,11 +68,11 @@ def make_model_factory(
             )
         )
     if model_name == "xgboost":
-        return lambda: _make_xgboost(seed, balanced)
+        return lambda: _make_xgboost(seed, balanced, scale_pos_weight, use_gpu)
     if model_name == "lightgbm":
-        return lambda: _make_lightgbm(seed, balanced)
+        return lambda: _make_lightgbm(seed, balanced, use_gpu)
     if model_name == "catboost":
-        return lambda: _make_catboost(seed, balanced)
+        return lambda: _make_catboost(seed, balanced, use_gpu)
     raise ValueError(f"Unknown model_name: {model_name}")
 
 
@@ -103,29 +112,34 @@ def _make_extra_trees(seed: int, balanced: bool) -> Pipeline:
     )
 
 
-def _make_xgboost(seed: int, balanced: bool):
+def _make_xgboost(seed: int, balanced: bool, scale_pos_weight: float = 1.0, use_gpu: bool = False):
     if find_spec("xgboost") is None:
         raise ImportError("Install optional dependency: pip install xgboost")
     from xgboost import XGBClassifier
 
-    scale = 5.67 if balanced else 1.0
+    device = "cuda" if use_gpu else "cpu"
+    # When balanced=True (OOF scoring phase), rely on sample_weight passed via fit()
+    # so scale_pos_weight must be 1.0 to avoid double-counting imbalance correction.
+    # When balanced=False (final training), use the runtime-computed scale_pos_weight.
+    effective_spw = 1.0 if balanced else scale_pos_weight
     return make_pipeline(
         SimpleImputer(strategy="median"),
         XGBClassifier(
+            device=device,
             eval_metric="logloss",
             n_estimators=300,
             max_depth=4,
             learning_rate=0.05,
             subsample=0.9,
             colsample_bytree=0.9,
-            scale_pos_weight=scale,
+            scale_pos_weight=effective_spw,
             random_state=seed,
-            n_jobs=-1,
+            n_jobs=1 if use_gpu else -1,
         ),
     )
 
 
-def _make_lightgbm(seed: int, balanced: bool):
+def _make_lightgbm(seed: int, balanced: bool, use_gpu: bool = False):
     if find_spec("lightgbm") is None:
         raise ImportError("Install optional dependency: pip install lightgbm")
     from lightgbm import LGBMClassifier
@@ -137,25 +151,26 @@ def _make_lightgbm(seed: int, balanced: bool):
             learning_rate=0.05,
             class_weight="balanced" if balanced else None,
             random_state=seed,
-            n_jobs=-1,
+            n_jobs=1,
             verbose=-1,
+            device="gpu" if use_gpu else "cpu",
         ),
     )
 
 
-def _make_catboost(seed: int, balanced: bool):
+def _make_catboost(seed: int, balanced: bool, use_gpu: bool = False):
     if find_spec("catboost") is None:
         raise ImportError("Install optional dependency: pip install catboost")
     from catboost import CatBoostClassifier
 
-    return make_pipeline(
-        SimpleImputer(strategy="median"),
-        CatBoostClassifier(
-            iterations=300,
-            learning_rate=0.05,
-            depth=5,
-            auto_class_weights="Balanced" if balanced else None,
-            random_seed=seed,
-            verbose=False,
-        ),
+    cb = CatBoostClassifier(
+        iterations=300,
+        learning_rate=0.05,
+        depth=5,
+        auto_class_weights="Balanced" if balanced else None,
+        random_seed=seed,
+        verbose=False,
+        task_type="GPU" if use_gpu else "CPU",
+        devices="0" if use_gpu else None,
     )
+    return make_pipeline(SimpleImputer(strategy="median"), cb)

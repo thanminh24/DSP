@@ -4,6 +4,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+OPERATING_CONDITION = (
+    "Confidence-guided OOF relabeling is designed for hidden-minority noise only: "
+    "cases where minority examples are mislabeled as majority class. "
+    "It does not improve and may harm performance under reverse asymmetric or "
+    "symmetric noise where the minority class is already over-represented in labels."
+)
+
 LAMBDA_NAMES: dict[float, str] = {
     0.0: "crcc_p_l0",
     0.25: "crcc_p_l025",

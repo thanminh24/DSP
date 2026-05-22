@@ -5,6 +5,11 @@ import numpy as np
 from sklearn.metrics import balanced_accuracy_score, f1_score, recall_score
 
 
+def _pipeline_fit_kwargs(model, sample_weight: np.ndarray) -> dict:
+    last = model.steps[-1][0] if hasattr(model, "steps") else None
+    return {f"{last}__sample_weight": sample_weight} if last else {"sample_weight": sample_weight}
+
+
 def evaluate_augmented(
     X_train_aug: np.ndarray,
     y_train_aug: np.ndarray,
@@ -15,6 +20,7 @@ def evaluate_augmented(
     n_relabeled: int = 0,
     n_synthetic: int = 0,
     relabel_correctness: float | None = None,
+    sample_weight: np.ndarray | None = None,
 ) -> dict:
     """Train on augmented data; report metrics matching evaluate() schema.
 
@@ -27,7 +33,10 @@ def evaluate_augmented(
     if len(np.unique(y_train_aug)) < 2:
         return _nan_result(n_relabeled, n_synthetic, relabel_correctness)
     model = model_factory()
-    model.fit(X_train_aug, y_train_aug)
+    if sample_weight is not None:
+        model.fit(X_train_aug, y_train_aug, **_pipeline_fit_kwargs(model, sample_weight))
+    else:
+        model.fit(X_train_aug, y_train_aug)
     y_pred = model.predict(X_test)
     return {
         "deleted": 0,
