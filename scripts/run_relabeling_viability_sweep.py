@@ -21,7 +21,10 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from pipeline.augmentation.relabeling import random_relabeling, relabel_typeA
 from pipeline.augmentation.msbs import minority_side_boundary_synthesis
 from pipeline.augmentation.synthesis import confidence_guided_synthesis
-from pipeline.baselines.soft_weighting import confidence_weighted_sample_weights
+from pipeline.baselines.soft_weighting import (
+    confidence_weighted_sample_weights,
+    confidence_weighted_sample_weights_balanced,
+)
 from pipeline.baselines.cleanlab_baselines import select_cleanlab_filter
 from pipeline.baselines.confidence_relabeling import (
     naive_confidence_majority_scores,
@@ -34,7 +37,11 @@ from pipeline.data.encoding import encode_train_test
 from pipeline.data.loaders import induce_imbalance, inject_noise, load_dataset
 from pipeline.evaluation.augment_metrics import evaluate_augmented
 from pipeline.evaluation.metrics import evaluate
-from pipeline.models.factories import make_model_factory, model_supports_sample_weight
+from pipeline.models.factories import (
+    make_cwms_factory,
+    make_model_factory,
+    model_supports_sample_weight,
+)
 from pipeline.scoring.balanced_oof import balanced_oof_majority_scores
 from pipeline.scoring.oof_loss import out_of_fold_loss
 
@@ -177,6 +184,7 @@ def run_single_viability(dataset_name, model_name, seed, noise_name, mn, mj, bud
                                      scale_pos_weight=spw_val, use_gpu=use_gpu)
     bal_factory = make_model_factory(model_name, seed, cat_indices, balanced=True,
                                      scale_pos_weight=spw_val, use_gpu=use_gpu)
+    cwms_factory = make_cwms_factory(model_name, seed, cat_indices, use_gpu=use_gpu)
     use_sw = model_supports_sample_weight(model_name)
 
     methods_to_run = set(methods or METHODS)
@@ -203,6 +211,7 @@ def run_single_viability(dataset_name, model_name, seed, noise_name, mn, mj, bud
             suspiciousness, bal_scores, unbal_scores, naive_scores, budget_count,
             minority_label, majority_label, rng, seed,
             bal_factory=bal_factory, use_sw=use_sw,
+            model_name=model_name, cwms_factory=cwms_factory, spw=spw,
         )
         row.update({
             "dataset": dataset_name, "model": model_name, "seed": seed,
@@ -217,7 +226,7 @@ def run_single_viability(dataset_name, model_name, seed, noise_name, mn, mj, bud
 
 def _run_method(method, X_tr, y_noisy, y_tr, noisy_mask, X_te, y_te, factory,
                 suspiciousness, bal_scores, unbal_scores, naive_scores, budget, min_label, maj_label, rng, seed,
-                bal_factory=None, use_sw=False):
+                bal_factory=None, use_sw=False, model_name=None, cwms_factory=None, spw=1.0):
     if method == "no_cleaning":
         return evaluate_augmented(X_tr, y_noisy, X_te, y_te, factory, min_label)
     if method == "class_weight_only":
@@ -239,20 +248,20 @@ def _run_method(method, X_tr, y_noisy, y_tr, noisy_mask, X_te, y_te, factory,
         idx = _oracle_relabel_indices(y_noisy, y_tr, min_label, maj_label, budget)
         y_rel = y_noisy.copy()
         y_rel[idx] = min_label
-        return _eval_relabel(X_tr, y_rel, idx, y_tr, X_te, y_te, factory, min_label)
+        return _eval_relabel(X_tr, y_rel, idx, X_te, y_te, factory, min_label, y_clean=y_tr)
     if method == "balanced_oof_relabel":
         y_rel, idx = relabel_typeA(y_noisy, bal_scores, budget, min_label, maj_label)
-        return _eval_relabel(X_tr, y_rel, idx, y_tr, X_te, y_te, factory, min_label)
+        return _eval_relabel(X_tr, y_rel, idx, X_te, y_te, factory, min_label, y_clean=y_tr)
     if method == "naive_confidence_relabel":
         y_rel, idx = relabel_typeA(y_noisy, naive_scores, budget, min_label, maj_label)
-        return _eval_relabel(X_tr, y_rel, idx, y_tr, X_te, y_te, factory, min_label)
+        return _eval_relabel(X_tr, y_rel, idx, X_te, y_te, factory, min_label, y_clean=y_tr)
     if method == "cleanlab_relabel":
         return _run_cleanlab_relabel(X_tr, y_noisy, y_tr, noisy_mask, X_te, y_te, factory, min_label, maj_label, budget)
     if method == "unbalanced_oof_relabel":
         idx = select_confidence_relabels(y_noisy, unbal_scores, budget, maj_label)
         y_rel = y_noisy.copy()
         y_rel[idx] = min_label
-        return _eval_relabel(X_tr, y_rel, idx, y_tr, X_te, y_te, factory, min_label)
+        return _eval_relabel(X_tr, y_rel, idx, X_te, y_te, factory, min_label, y_clean=y_tr)
     if method == "shuffled_score_relabel":
         shuffled = bal_scores.copy()
         valid = np.where(~np.isnan(shuffled))[0]
@@ -262,16 +271,16 @@ def _run_method(method, X_tr, y_noisy, y_tr, noisy_mask, X_te, y_te, factory,
         idx = select_confidence_relabels(y_noisy, shuffled, budget, maj_label)
         y_rel = y_noisy.copy()
         y_rel[idx] = min_label
-        return _eval_relabel(X_tr, y_rel, idx, y_tr, X_te, y_te, factory, min_label)
+        return _eval_relabel(X_tr, y_rel, idx, X_te, y_te, factory, min_label, y_clean=y_tr)
     if method == "inverted_score_relabel":
         inverted = np.where(np.isnan(bal_scores), np.nan, 1.0 - bal_scores)
         idx = select_confidence_relabels(y_noisy, inverted, budget, maj_label)
         y_rel = y_noisy.copy()
         y_rel[idx] = min_label
-        return _eval_relabel(X_tr, y_rel, idx, y_tr, X_te, y_te, factory, min_label)
+        return _eval_relabel(X_tr, y_rel, idx, X_te, y_te, factory, min_label, y_clean=y_tr)
     if method == "random_relabel":
         y_rel, idx = random_relabeling(y_noisy, budget, maj_label, min_label, rng)
-        return _eval_relabel(X_tr, y_rel, idx, y_tr, X_te, y_te, factory, min_label)
+        return _eval_relabel(X_tr, y_rel, idx, X_te, y_te, factory, min_label, y_clean=y_tr)
     if method in ("cgms_t03", "cgms_t05", "cgms_t07"):
         threshold_map = {"cgms_t03": 0.3, "cgms_t05": 0.5, "cgms_t07": 0.7}
         tau = threshold_map[method]
@@ -290,24 +299,61 @@ def _run_method(method, X_tr, y_noisy, y_tr, noisy_mask, X_te, y_te, factory,
                                    min_label, n_synthetic=n_synth,
                                    relabel_correctness=float("nan"))
     if method == "cwms":
-        sw = confidence_weighted_sample_weights(y_noisy, bal_scores, maj_label)
-        return evaluate_augmented(X_tr, y_noisy, X_te, y_te, factory,
-                                   min_label, sample_weight=sw)
+        if model_name == "calibrated_lr":
+            return _nan_skip_row()
+        use_balanced = model_name in ("xgboost", "lightgbm", "catboost", "hgb")
+        if use_balanced:
+            sw = confidence_weighted_sample_weights_balanced(
+                y_noisy, bal_scores, maj_label, scale_pos_weight=spw,
+            )
+            return evaluate_augmented(X_tr, y_noisy, X_te, y_te,
+                                       cwms_factory or factory, min_label, sample_weight=sw)
+        else:
+            sw = confidence_weighted_sample_weights(y_noisy, bal_scores, maj_label)
+            return evaluate_augmented(X_tr, y_noisy, X_te, y_te,
+                                       factory, min_label, sample_weight=sw)
     if method == "cwms_msbs":
-        # Combined: synthesize minority samples near boundary (MSBS) + suppress suspicious
-        # majority in the same training pass (CWMS). Synthetic samples get weight=1.0.
+        if model_name == "calibrated_lr":
+            return _nan_skip_row()
         X_aug, y_aug, n_synth = minority_side_boundary_synthesis(
             X_tr, y_noisy, bal_scores, budget, min_label, maj_label, seed=seed,
         )
-        # CWMS weights for original samples; synthetic appended at end → weight=1.0 by default
-        sw_orig = confidence_weighted_sample_weights(y_noisy, bal_scores, maj_label)
-        sw_synth = np.ones(n_synth, dtype=float)
+        use_balanced = model_name in ("xgboost", "lightgbm", "catboost", "hgb")
+        if use_balanced:
+            sw_orig = confidence_weighted_sample_weights_balanced(
+                y_noisy, bal_scores, maj_label, spw,
+            )
+            sw_synth = np.full(n_synth, float(spw))
+            fact = cwms_factory or factory
+        else:
+            sw_orig = confidence_weighted_sample_weights(y_noisy, bal_scores, maj_label)
+            sw_synth = np.ones(n_synth, dtype=float)
+            fact = factory
         sw_combined = np.concatenate([sw_orig, sw_synth])
-        return evaluate_augmented(X_aug, y_aug, X_te, y_te, factory,
+        return evaluate_augmented(X_aug, y_aug, X_te, y_te, fact,
                                    min_label, n_synthetic=n_synth,
                                    relabel_correctness=float("nan"),
                                    sample_weight=sw_combined)
     raise ValueError(f"Unknown method: {method}")
+
+
+def _nan_skip_row():
+    """Return NaN row for methods skipped on a per-model basis (e.g. calibrated_lr + CWMS)."""
+    return {
+        "deleted": 0,
+        "balanced_accuracy": float("nan"),
+        "accuracy": float("nan"),
+        "macro_f1": float("nan"),
+        "weighted_f1": float("nan"),
+        "minority_recall": float("nan"),
+        "minority_precision": float("nan"),
+        "majority_recall": float("nan"),
+        "noise_precision_deleted": float("nan"),
+        "clean_minority_deletion_rate": float("nan"),
+        "n_relabeled": 0,
+        "n_synthetic": 0,
+        "relabel_correctness": float("nan"),
+    }
 
 
 def _compute_cleanlab_oof_probs(X_tr, y_noisy, factory):
@@ -357,10 +403,10 @@ def _run_cleanlab_relabel(X_tr, y_noisy, y_tr, noisy_mask, X_te, y_te, factory,
     y_rel = y_noisy.copy()
     if len(idx):
         y_rel[idx] = min_label
-    return _eval_relabel(X_tr, y_rel, idx, y_tr, X_te, y_te, factory, min_label)
+    return _eval_relabel(X_tr, y_rel, idx, X_te, y_te, factory, min_label, y_clean=y_tr)
 
 
-def _eval_relabel(X_tr, y_rel, idx, y_clean, X_te, y_te, factory, min_label):
+def _eval_relabel(X_tr, y_rel, idx, X_te, y_te, factory, min_label, *, y_clean):
     correctness = float((y_clean[idx] == min_label).mean()) if len(idx) else float("nan")
     return evaluate_augmented(
         X_tr, y_rel, X_te, y_te, factory, min_label,
