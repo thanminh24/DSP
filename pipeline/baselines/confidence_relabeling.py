@@ -1,3 +1,4 @@
+# unbalanced OOF baseline: comparison only
 """Confidence-based relabeling baselines."""
 
 from __future__ import annotations

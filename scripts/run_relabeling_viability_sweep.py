@@ -61,25 +61,31 @@ QUICK_BUDGETS = [0.10]
 IMBALANCE_RATIOS = [0.15, 0.30]
 QUICK_RATIOS = [0.15]
 METHODS = [
-    "no_cleaning",
+    # === PAPER METHODS (primary contribution) ===
+    "cwms_msbs",        # combined: MSBS synthesis + CWMS weights (our method)
+    "cwms_msbs_shuffled",  # shuffled-score ablation: proves OOF scores are load-bearing
+    "msbs",             # MSBS standalone (ablation)
+    "cwms",             # CWMS standalone (ablation)
+
+    # === BASELINES (deletion-based) ===
+    "no_cleaning",      # train on noisy data, no correction
+    "class_proportional",  # delete top-budget by loss, class-proportional allocation
+
+    # === HISTORICAL COMPARISON (not in paper main results) ===
+    "class_weight_only",
     "global_top_loss",
-    "class_proportional",
-    # "balanced_oof_relabel",  # DISCOURAGED: OOF circularity — scorer same family as final model
-    "unbalanced_oof_relabel",
-    "naive_confidence_relabel",   # confirmation-bias baseline: no OOF, full-data scoring
-    "cleanlab_relabel",           # CleanLab identifies noisy majority samples → relabel
+    "oracle_relabel",
     "cleanlab_filter",
+    "cleanlab_relabel",
+    "unbalanced_oof_relabel",
+    "naive_confidence_relabel",
     "shuffled_score_relabel",
     "inverted_score_relabel",
     "random_relabel",
-    "class_weight_only",
-    "oracle_relabel",
+    # "balanced_oof_relabel",  # DISCOURAGED: OOF circularity
     "cgms_t03",
     "cgms_t05",
     "cgms_t07",
-    "msbs",
-    "cwms",
-    "cwms_msbs",   # combined: MSBS synthesis + CWMS per-sample weights in one training pass
 ]
 out_csv_TEMPLATE = str(PROJECT_ROOT / "outputs/relabeling-viability-{models}.csv")
 
@@ -193,8 +199,13 @@ def run_single_viability(dataset_name, model_name, seed, noise_name, mn, mj, bud
     bal_scores = balanced_oof_majority_scores(
         X_tr, y_noisy, bal_factory, minority_label, majority_label, 5, seed, use_sample_weight=use_sw,
     )
-    unbal_scores = unbalanced_oof_majority_scores(
-        X_tr, y_noisy, std_factory, minority_label, majority_label, 5, seed, use_sample_weight=False,
+    unbal_scores = (
+        unbalanced_oof_majority_scores(
+            X_tr, y_noisy, std_factory, minority_label, majority_label, 5, seed, use_sample_weight=False,
+        )
+        if any(m in methods_to_run for m in ["unbalanced_oof_relabel", "shuffled_score_relabel",
+                                              "inverted_score_relabel"])
+        else None
     )
     # Full-data (non-OOF) balanced scores for confirmation-bias baseline
     naive_scores = (
@@ -299,9 +310,11 @@ def _run_method(method, X_tr, y_noisy, y_tr, noisy_mask, X_te, y_te, factory,
                                    min_label, n_synthetic=n_synth,
                                    relabel_correctness=float("nan"))
     if method == "cwms":
-        if model_name == "calibrated_lr":
+        # XGBoost: scale_pos_weight and CWMS sample_weight create conflicting imbalance
+        # corrections even with scale_pos_weight=1.0 in cwms_factory. Excluded from paper.
+        if model_name in ("calibrated_lr", "xgboost"):
             return _nan_skip_row()
-        use_balanced = model_name in ("xgboost", "lightgbm", "catboost", "hgb")
+        use_balanced = model_name in ("lightgbm", "catboost", "hgb")
         if use_balanced:
             sw = confidence_weighted_sample_weights_balanced(
                 y_noisy, bal_scores, maj_label, scale_pos_weight=spw,
@@ -312,21 +325,28 @@ def _run_method(method, X_tr, y_noisy, y_tr, noisy_mask, X_te, y_te, factory,
             sw = confidence_weighted_sample_weights(y_noisy, bal_scores, maj_label)
             return evaluate_augmented(X_tr, y_noisy, X_te, y_te,
                                        factory, min_label, sample_weight=sw)
-    if method == "cwms_msbs":
+    if method in ("cwms_msbs", "cwms_msbs_shuffled"):
         if model_name == "calibrated_lr":
             return _nan_skip_row()
+        scores_for_method = bal_scores.copy()
+        if method == "cwms_msbs_shuffled":
+            valid = ~np.isnan(scores_for_method)
+            scores_for_method[valid] = rng.permutation(scores_for_method[valid])
         X_aug, y_aug, n_synth = minority_side_boundary_synthesis(
-            X_tr, y_noisy, bal_scores, budget, min_label, maj_label, seed=seed,
+            X_tr, y_noisy, scores_for_method, budget, min_label, maj_label, seed=seed,
         )
-        use_balanced = model_name in ("xgboost", "lightgbm", "catboost", "hgb")
+        use_balanced = model_name in ("lightgbm", "catboost", "hgb")
         if use_balanced:
+            # Boosting models: fold spw so CWMS and class correction don't double-apply.
             sw_orig = confidence_weighted_sample_weights_balanced(
-                y_noisy, bal_scores, maj_label, spw,
+                y_noisy, scores_for_method, maj_label, spw,
             )
             sw_synth = np.full(n_synth, float(spw))
             fact = cwms_factory or factory
         else:
-            sw_orig = confidence_weighted_sample_weights(y_noisy, bal_scores, maj_label)
+            # LR: minority weight=1.0; CWMS majority suppression provides sufficient correction.
+            # Adding spw to minority over-corrects (confirmed by smoke test: -1.5pp BA).
+            sw_orig = confidence_weighted_sample_weights(y_noisy, scores_for_method, maj_label)
             sw_synth = np.ones(n_synth, dtype=float)
             fact = factory
         sw_combined = np.concatenate([sw_orig, sw_synth])

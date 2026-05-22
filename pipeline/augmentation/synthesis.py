@@ -1,3 +1,4 @@
+# CGMS (failed baseline): not part of paper contribution
 """Confidence-Guided Minority Synthesis (CGMS).
 
 Keep all original labels intact. Synthesize new minority samples from

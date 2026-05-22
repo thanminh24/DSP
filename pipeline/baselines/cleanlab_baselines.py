@@ -1,3 +1,4 @@
+# cleanlab baseline: comparison method, not paper contribution
 """Optional cleanlab baselines."""
 
 from __future__ import annotations

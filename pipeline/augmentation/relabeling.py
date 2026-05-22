@@ -1,3 +1,4 @@
+# relabeling baselines: OOF relabeling discouraged (see OOF circularity note)
 """Type A relabeling: flip top-k majority samples to minority based on scores."""
 from __future__ import annotations
 
