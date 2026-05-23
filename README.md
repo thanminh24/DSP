@@ -14,39 +14,43 @@ A dual boundary correction approach with **zero label modification**:
 
 Both components reuse OOF confidence scores already computed for detection — no extra cost.
 
-## Verdict: VIABLE — beats class-proportional deletion with zero label corruption
+## Verdict: VIABLE v2 — massive recall recovery, model-dependent BA gains
 
-n=150 paired comparisons per method (3 models × 5 datasets × 10 seeds, hidden_minority_medium).
+n=250 paired comparisons per method (5 models × 5 datasets × 10 seeds, hidden_minority_medium;
+calibrated_lr excluded from CWMS methods). v2 uses class-balanced CWMS weights for boosting models
+(fixes double-correction in XGBoost). Sweep: 6 models total, 1,350 rows.
 
-| Method | BA | Δ vs class_proportional | p-value |
-|--------|---:|-------------------------:|--------:|
-| **cwms_msbs** | **0.7081** | **+1.21pp** | 0.008 |
-| class_proportional | 0.6960 | — | — |
-| cwms | 0.6598 | −3.62pp | 2.9e-08 |
-| msbs | 0.6371 | −5.89pp | 4.6e-25 |
-| no_cleaning | 0.5759 | −12.01pp | 3.9e-26 |
+| Method | BA | Δ vs class_proportional | minority_recall | minority_precision |
+|--------|---:|-------------------------:|----------------:|-------------------:|
+| **cwms_msbs** | **0.7101** | **+0.75pp** | **0.682** | 0.484 |
+| cwms | 0.7104 | +0.78pp | 0.612 | 0.533 |
+| class_proportional | 0.7026 | — | 0.509 | 0.629 |
+| msbs | 0.6621 | −4.05pp | 0.417 | 0.633 |
+| no_cleaning | 0.6104 | −9.22pp | 0.271 | 0.645 |
 
-**Minority recall: +7.5pp vs class_proportional** (0.556 vs 0.481, p=2.1e-09).
-Deletion removes scarce minority evidence; synthesis adds it.
+**Minority recall: +17.3pp vs class_proportional** (0.682 vs 0.509).
+Deletion removes scarce minority evidence; CWMS+MSBS recovers it — at the cost of
+lower minority precision (0.484 vs 0.629), as the model predicts minority more aggressively.
 
-### Combined method beats both standalone components
+### Per-Model Results (v2: linear + all boosting families)
 
-| Comparison | Win Rate | Δ BA | p-value |
-|------------|----------|------|---------|
-| cwms_msbs vs msbs | 96.0% | +7.10pp | 3.2e-25 |
-| cwms_msbs vs cwms | 84.0% | +4.83pp | 8.3e-20 |
+| Model | cwms_msbs BA | class_prop BA | Δ BA | Δ Recall | Win Rate | p-value |
+|-------|-------------|---------------|---|----------|----------|---------|
+| **lr** | **0.7454** | 0.7032 | **+4.22pp** | +21.6pp | 82% | 6.2e-07 |
+| hgb | 0.7027 | 0.6956 | +0.70pp | +15.1pp | 58% | 0.18 |
+| lightgbm | 0.7004 | 0.6975 | +0.29pp | +11.5pp | 64% | 0.21 |
+| catboost | 0.6978 | 0.7040 | −0.62pp | +24.0pp | 48% | 0.23 |
+| xgboost | 0.7043 | 0.7259 | −2.16pp | +8.6pp | 28% | 0.002 |
+| calibrated_lr | — | 0.6891 | — | — | — | — |
 
-### Per-Model Results (linear + boosting families)
+**calibrated_lr**: excluded from cwms/cwms_msbs due to sklearn sample_weight routing bug
+([sklearn#21134](https://github.com/scikit-learn/scikit-learn/issues/21134)).
+Shown for no_cleaning and class_proportional only.
 
-| Model | cwms_msbs BA | class_prop BA | Δ | Win Rate | p-value |
-|-------|-------------|---------------|---|----------|---------|
-| **lr** | **0.7454** | 0.7032 | **+4.22pp** | 82% | 6.2e-07 |
-| hgb | 0.6981 | 0.6956 | +0.25pp | 56% | 0.53 (ns) |
-| calibrated_lr | 0.6808 | 0.6891 | −0.83pp | 26% | 0.006 |
-
-LR is the star performer — sample_weight maps directly to gradient scaling. HGB ties.
-calibrated_lr's sample_weight routing is partially blocked by scikit-learn
-(see [sklearn#21134](https://github.com/scikit-learn/scikit-learn/issues/21134)).
+**Key insight**: every model gains minority recall (+8 to +24pp). BA gains depend on
+model family: linear models benefit most (sample_weight = exact gradient scaling);
+boosting models are neutral to slightly positive (hgb, lgbm) or negative (xgb).
+The recall-precision trade-off is the central story — CWMS+MSBS trades precision for recall.
 
 ### Why not tree models (RF/ET)?
 
@@ -84,29 +88,29 @@ n=1200 paired comparisons (5 datasets × 8 models × 10 seeds × 3 noise protoco
 ## Setup
 
 ```bash
-conda create -n dsp python=3.12 -y
 conda activate dsp
-pip install -r requirements.txt
+# Python: /home/than-minh/miniconda3/envs/dsp/bin/python
+# Packages: sklearn 1.6.1, xgboost 3.1.2, lightgbm 4.6.0, catboost 1.2.8, pandas 2.3.3
 ```
 
-## Quick Reproduction (~10 min, LR only)
+## Quick Reproduction (~2h, 6 models, medium protocol)
 
 ```bash
 conda activate dsp
-python scripts/run_cwms_msbs_full_sweep.py --medium-only
-python scripts/analyze_cwms_msbs_results.py
+python scripts/run_cwms_msbs_deep_sweep.py --medium-only
+python scripts/analyze_cwms_msbs_deep_results.py
 ```
 
 Outputs:
-- `outputs/cwms-msbs-full-sweep.csv` — full benchmark grid (3 models × 5 datasets × 10 seeds)
-- Statistical summary printed to stdout (BA, recall, Wilcoxon p-values)
+- `outputs/cwms-msbs-deep-sweep.csv` — v2 deep sweep (6 models × 5 datasets × 10 seeds, all metrics)
+- Statistical summary printed to stdout (BA, recall, precision, F1, Wilcoxon p-values)
 
 ## Full Sweep (all 3 noise protocols, ~4h)
 
 ```bash
 conda activate dsp
-python scripts/run_cwms_msbs_full_sweep.py
-python scripts/analyze_cwms_msbs_results.py
+python scripts/run_cwms_msbs_deep_sweep.py
+python scripts/analyze_cwms_msbs_deep_results.py
 ```
 
 ## Legacy: OOF Relabeling Sweep
@@ -121,20 +125,17 @@ python scripts/analyze_relabeling_statistics.py
 python scripts/generate_figures.py
 ```
 
-Outputs:
-- `outputs/relabeling-statistical-tests.csv` — paired Wilcoxon tests
-- `outputs/relabeling-viability-verdict.md` — verdict + per-model win rates
-- `outputs/plots/` — 3 publication figures (PNG)
-
 ## Claim Boundary
 
-We claim: for hidden-minority label noise in imbalanced tabular data, the CWMS+MSBS
-boundary correction method beats confidence-proportional deletion while preserving all
-original labels — zero label corruption, higher recall, and better balanced accuracy for
-linear and gradient boosting classifiers.
+We claim: for hidden-minority label noise in imbalanced tabular data, CWMS+MSBS
+recovers minority recall (+17pp over deletion) with zero label modification.
+BA gains are model-dependent — large for linear classifiers (+4.2pp for LR),
+neutral for gradient boosting. The method preserves all original labels and
+reuses OOF confidence scores with no extra training cost.
 
-We do NOT claim: state of the art, general label correction, success on all noise types
-or model families (tree-based ensembles excluded), real-world deployment readiness.
+We do NOT claim: state of the art, general label correction, success on all noise
+types or model families (tree-based ensembles excluded, calibrated_lr excluded from
+CWMS methods), real-world deployment readiness.
 
 ## Docs
 

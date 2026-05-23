@@ -21,58 +21,32 @@ Datasets are auto-downloaded from OpenML on first run and cached under `data/`:
 
 ## Quick Reproduction (Core Claim)
 
-Minimal reproduction proving the core claim (LR model, quick grid, ~15 min):
+Minimal reproduction proving the core claim (~2h, 6 models, medium protocol):
 
 ```bash
 conda activate dsp
-python scripts/run_relabeling_viability_sweep.py lr --quick
-python scripts/combine_relabeling_results.py
-python scripts/analyze_relabeling_statistics.py
-python scripts/generate_figures.py
+python scripts/run_cwms_msbs_deep_sweep.py --medium-only
+python scripts/analyze_cwms_msbs_deep_results.py
 ```
 
 Output files:
-- `outputs/relabeling-all-results-combined.csv` — combined result rows
-- `outputs/relabeling-statistical-tests.csv` — paired Wilcoxon tests
-- `outputs/relabeling-viability-verdict.md` — verdict + per-model win rates
-- `outputs/plots/relabeling-main-table.png` — per-model Δ BA/recall
-- `outputs/plots/relabeling-precision-vs-random.png` — relabel precision comparison
-- `outputs/plots/relabeling-operating-condition.png` — noise protocol heatmap
+- `outputs/cwms-msbs-deep-sweep.csv` — 1,350 rows (6 models × 5 datasets × 10 seeds)
+- Statistical summary printed to stdout (BA, recall, precision, F1, Wilcoxon p-values)
 
-## Full Sweep (All 8 Model Families)
+## Full Sweep (All 3 Noise Protocols)
 
 ```bash
 conda activate dsp
-
-# Tree models (~5 min each)
-python scripts/run_relabeling_viability_sweep.py lr --quick
-python scripts/run_relabeling_viability_sweep.py calibrated_lr --quick
-python scripts/run_relabeling_viability_sweep.py extra_trees --quick
-python scripts/run_relabeling_viability_sweep.py random_forest --quick
-python scripts/run_relabeling_viability_sweep.py hgb --quick
-
-# Boosting models (~30-120 min each, CPU)
-python scripts/run_relabeling_viability_sweep.py xgboost --quick
-python scripts/run_relabeling_viability_sweep.py lightgbm --quick
-python scripts/run_relabeling_viability_sweep.py catboost --quick
-
-# Combine + analyze + figures
-python scripts/combine_relabeling_results.py
-python scripts/analyze_relabeling_statistics.py
-python scripts/generate_figures.py
+python scripts/run_cwms_msbs_deep_sweep.py
+python scripts/analyze_cwms_msbs_deep_results.py
 ```
 
-Expected runtime: ~4-6 hours total on CPU (8 cores). GPU reduces boosting time by ~40%.
+Expected runtime: ~4h on CPU (8 cores). GPU reduces boosting time by ~40%.
 
-## Grid Dimensions (Quick Mode)
+## Grid Dimensions
 
-Per model: 5 datasets × 10 seeds × 3 noise protocols × 1 budget (0.10) × 1 ratio (0.15)
-= 150 combos × 11 methods = 1650 rows.
-
-## Full Grid (Publication-Grade)
-
-Remove `--quick` flag: 5 datasets × 20 seeds × 5 noise protocols × 3 budgets × 2 ratios
-= 3000 combos × 11 methods = 33,000 rows per model. Expected ~10-20 hours per model.
+Per sweep: 6 models (5 with full methods, 1 with 2 methods) × 5 datasets × 10 seeds
+× 3 noise protocols × 1 budget (0.10) × 1 ratio (0.15) = ~4,300 rows.
 
 ## Output Schema
 
@@ -80,14 +54,20 @@ Remove `--quick` flag: 5 datasets × 20 seeds × 5 noise protocols × 3 budgets 
 |--------|-------------|
 | dataset | Dataset name (pima, credit-g, yeast, ecoli, phoneme) |
 | model | Model family |
-| seed | Random seed (10 or 20 values) |
-| noise_protocol | Noise type (hidden_minority_low/medium/high, reverse_asymmetric, symmetric) |
+| seed | Random seed (10 values) |
+| noise_protocol | Noise type (hidden_minority_low/medium/high) |
 | mn_to_maj | Minority→majority noise rate |
 | maj_to_min | Majority→minority noise rate |
-| budget | Cleaning/relabeling budget (fraction of training set) |
+| budget | Budget fraction of training set |
 | target_ratio | Imbalance target ratio |
-| method | Cleaning/relabeling method name |
+| method | Method name (no_cleaning, class_proportional, msbs, cwms, cwms_msbs) |
 | balanced_accuracy | Test-set balanced accuracy |
+| accuracy | Test-set accuracy |
+| macro_f1 | Macro-averaged F1 |
+| weighted_f1 | Weighted F1 |
 | minority_recall | Test-set minority class recall |
+| minority_precision | Test-set minority class precision |
+| majority_recall | Test-set majority class recall |
+| n_synthetic | Number of MSBS synthetic samples |
 | macro_f1 | Test-set macro F1 |
 | relabel_correctness | Fraction of relabeled samples that were true minority |

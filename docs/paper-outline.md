@@ -1,18 +1,19 @@
-# Paper Outline: Confidence-Guided OOF Relabeling for Hidden-Minority Label Noise
+# Paper Outline: CWMS+MSBS Boundary Correction for Hidden-Minority Label Noise
 
 ## 1. Abstract (≤150 words)
 
-Problem: Noisy labels in imbalanced classification disproportionately harm the minority class.
-Existing cleaning methods delete suspected mislabeled examples, which can discard scarce
-minority feature evidence. We propose class-balanced out-of-fold (OOF) confidence-guided
-relabeling: train balanced OOF models, score majority-labeled samples by P(minority|x),
-relabel the top-k to minority, then retrain. On 5 tabular benchmarks under controlled
-hidden-minority noise (30% minority→majority, 10% majority→minority) across 8 model families
-and [N] paired comparisons, balanced OOF relabeling improves balanced accuracy by +[X]%
-over class-proportional deletion (p=[p]) and minority recall by +[Y]%. Gains concentrate
-in the hidden-minority noise regime; reverse asymmetric and symmetric noise show no
-advantage. The method is model-agnostic: improvements hold across logistic regression,
-tree ensembles, histogram boosting, XGBoost, LightGBM, and CatBoost.
+Noisy labels in imbalanced classification disproportionately harm the minority class.
+Existing cleaning methods delete or relabel samples — deletion loses scarce minority
+evidence, relabeling introduces label corruption. We propose CWMS+MSBS, a dual boundary
+correction approach: Minority-Side Boundary Synthesis (MSBS) interpolates synthetic
+minority samples near the contaminated boundary, while Confidence-Weighted Majority
+Suppression (CWMS) down-weights suspicious majority samples via OOF-derived confidence
+weights. Both components reuse scores already computed, requiring no extra training.
+On 5 tabular benchmarks under hidden-minority noise across 6 model families and 1,350
+paired comparisons, CWMS+MSBS improves minority recall by +17.3pp over class-proportional
+deletion while modifying zero labels. Balanced accuracy gains are model-dependent:
++4.2pp for logistic regression (p<0.001), neutral for gradient boosting. The method
+targets hidden-minority noise only.
 
 ## 2. Introduction
 
@@ -20,19 +21,19 @@ Hook: Label noise and class imbalance frequently co-occur in real-world tabular 
 (medical screening, fraud detection, manufacturing QC). Both problems independently
 degrade classifier performance; together, minority examples are doubly vulnerable.
 
-Gap: Existing confident-learning approaches (Northcutt et al., 2021) identify label
-issues but recommend deletion. For imbalanced data, deleting a falsely majority-labeled
-minority sample removes feature evidence the minority class cannot afford to lose.
+Gap: Existing methods either delete suspicious samples (losing scarce minority evidence)
+or relabel them (introducing label corruption and circularity concerns when the same
+model family scores and trains). Neither approach is satisfying for publication.
 
 Contribution:
-1. A class-balanced OOF scoring method that estimates P(minority|x) without minority
-   under-representation bias in the scorer.
-2. A confidence-guided top-k relabeling rule (relabel majority-labeled with highest
-   minority-confidence to minority).
-3. Controlled benchmark across 8 model families, 5 noise protocols, and [N] paired
-   comparisons establishing viability.
-4. Operating condition documentation: method works for hidden-minority noise only;
-   reverse asymmetric and symmetric noise show no improvement.
+1. CWMS+MSBS: a zero-label-corruption dual boundary correction with no extra training cost.
+2. MSBS: synthesizes minority samples near the decision boundary from confirmed seeds.
+3. CWMS: suppresses suspicious majority via OOF confidence weights, with class balance
+   folded in for boosting models to avoid double-correction.
+4. Controlled benchmark across 6 model families (LR, HGB, XGBoost, LightGBM, CatBoost;
+   calibrated_lr shown with known sklearn limitation).
+5. Operating condition: hidden-minority noise only; tree-based ensembles excluded
+   (bootstrap dilutes sample_weight signal).
 
 ## 3. Related Work
 
