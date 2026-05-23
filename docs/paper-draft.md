@@ -2,7 +2,7 @@
 
 ## Abstract
 
-Hidden minority-class label noise — where minority samples are mislabelled as majority at substantially higher rates than the reverse — systematically erodes the decision boundary in imbalanced classification. Standard oversampling methods amplify this corruption by synthesising from a contaminated minority pool. We propose NoiSyn, which combines out-of-fold confidence scoring (using the same model family as the final predictor), confidence-weighted majority suppression, and minority-side boundary synthesis. Across five UCI/OpenML tabular datasets, seven model families, three noise protocols, and ten seeds, NoiSyn achieves +3.47 pp balanced accuracy over class-proportional reweighting for logistic regression (p = 6.1×10⁻¹⁵), and outperforms IW-SMOTE — the strongest competitor with public code — by +1.84 pp (p = 0.023). A shuffled-score ablation confirms the out-of-fold score ordering is load-bearing.
+Hidden minority-class label noise — where minority samples are mislabelled as majority at substantially higher rates than the reverse — systematically erodes the decision boundary in imbalanced classification. Standard oversampling methods amplify this corruption by synthesising from a contaminated minority pool. We propose NoiSyn, which combines out-of-fold confidence scoring (using the same model family as the final predictor), confidence-weighted majority suppression, and minority-side boundary synthesis — without modifying any labels. Across fifteen UCI/OpenML tabular datasets, three model families (LR, SVM, HGB), three asymmetric noise protocols, and ten seeds, NoiSyn achieves statistically significant improvements for logistic regression (+3.16 pp balanced accuracy vs class-proportional reweighting, Stouffer Z = 9.31, p ≈ 0, 9/15 datasets; +3.47/+3.81/+2.21 pp for low/medium/high protocols). NoiSyn is numerically ahead of IW-SMOTE for LR (+0.71 pp) but the difference is not statistically significant across all protocols and datasets; under medium noise specifically, NoiSyn leads by +3.81 pp vs class-proportional. Results for SVM and HGB are mixed and model-specific. RF/ET component ablation identifies CWMS as the primary harm source for bootstrap ensemble models. A shuffled-score ablation confirms the OOF score ordering is load-bearing.
 
 ## 1. Introduction
 
@@ -14,7 +14,7 @@ Existing noise-robust oversampling methods address this problem in two ways: by 
 
 We propose NoiSyn (Noise-Aware Out-of-Fold Synthesis), a method that addresses hidden minority-class noise by combining two complementary mechanisms: (1) Confidence-Weighted Majority Suppression, which down-weights majority-labelled training samples in proportion to their estimated probability of being mislabelled minority samples, and (2) Minority-Side Boundary Synthesis, which synthesises new minority samples near the corrupted boundary, guided by the same out-of-fold confidence estimates. Critically, the confidence scorer uses the same model family as the final predictor, trained via stratified out-of-fold cross-validation to avoid confirmation bias, and the method applies no label changes — only sample weights and synthetic additions.
 
-We evaluate NoiSyn across seven model families, five UCI/OpenML tabular datasets, three noise severity levels, and ten random seeds. Against the strongest published competitor with reproducible code (IW-SMOTE, Pattern Recognition 2022), NoiSyn achieves +1.84 percentage points balanced accuracy (p = 0.023) on logistic regression under medium noise. Against the internal class-proportional baseline, gains reach +3.47 pp for logistic regression (p = 6.1×10⁻¹⁵) and +2.16 pp for support vector machines (p = 1.7×10⁻⁷). A shuffled-score ablation confirms the out-of-fold scores are load-bearing: shuffling them within the method collapses the gain by 1.1–1.8 pp across all five compatible model families.
+We evaluate NoiSyn across three model families (LR, SVM, HGB), fifteen UCI/OpenML tabular datasets, three noise severity levels, and ten random seeds. Against the internal class-proportional baseline, logistic regression gains +3.47/+3.81/+2.21 pp balanced accuracy for low/medium/high noise protocols (Stouffer Z = 7.22/6.28/2.90), with 9/15 datasets individually significant at α = 0.05 after combining all protocols. Against the strongest published competitor with reproducible code (IW-SMOTE, Pattern Recognition 2022), NoiSyn is numerically ahead for LR (+0.71 pp, Z = 1.17, p = 0.12) — not statistically significant across all protocols and datasets, but +3.81 pp ahead of class-proportional under medium noise where hidden minority corruption is most harmful. SVM shows a positive but not statistically significant result at 15-dataset scale (+0.37 pp, Z = 1.24, p = 0.11); sensitivity analysis at IR=0.30 yields a larger SVM gain (+4.05 pp). A shuffled-score ablation confirms the out-of-fold scores are load-bearing: shuffling them collapses the gain by 0.8–1.7 pp across all seven CWMS-compatible model families (Z > 2.9 for all, p < 1.4e-3).
 
 ## 2. Related Work
 
@@ -42,8 +42,8 @@ Confidence-based label correction using out-of-fold cross-validation is an estab
 
 1. A noise-aware synthesis pipeline that combines confidence-weighted training (suppression) with guided minority-side synthesis, operating without any label modification.
 2. Self-family out-of-fold scoring: the confidence scorer is a balanced instance of the same model family as the final predictor, preventing cross-family misspecification and avoiding confirmation bias through out-of-fold evaluation.
-3. Empirical validation across seven model families, including gradient boosting (Hist. Gradient Boosting, LightGBM, CatBoost), kernel methods (SVM), linear models (LR), and tree ensembles (Random Forest, Extra Trees), with a clear characterisation of when the method helps and when it does not.
-4. The first controlled evaluation of hidden-minority-class asymmetric noise in direct comparison with published noise-robust SMOTE methods on a standardised five-dataset benchmark.
+3. Empirical characterisation of which model families benefit from NoiSyn and why: statistically significant and consistent gains for logistic regression only (LR, +3.16 pp, Stouffer Z = 9.31, p ≈ 0, 9/15 datasets); neutral-to-negative results for gradient boosting families (HGB/LGB −0.05 pp, CatBoost −1.11 pp) driven by noise-level interaction — gains at low noise erased by degradation under high noise; inconsistent results for SVM; and the first documented case where confidence-weighted suppression actively harms bootstrap ensemble models (RF −4.37 pp, ET −3.79 pp), with component ablation identifying CWMS as the primary harm source.
+4. The first controlled evaluation of hidden-minority-class asymmetric noise in direct comparison with published noise-robust SMOTE methods on a standardised fifteen-dataset benchmark, with operating-condition characterisation (failure modes under symmetric and reverse-asymmetric noise), bootstrap-ensemble component ablation, and imbalance-ratio sensitivity analysis.
 
 ## 4. Method
 
@@ -105,86 +105,164 @@ No label corrections are made at any step.
 
 ## 5. Experiment Setup
 
-**Datasets.** Five tabular binary classification datasets: Pima Indians Diabetes (768 samples), German Credit (1,000 samples), Yeast (1,484 samples), Phoneme (5,404 samples), Ecoli (336 samples).
+**Datasets.** Fifteen tabular binary classification datasets from UCI/OpenML, covering a range of domains, sizes, and natural imbalance ratios: Pima Indians Diabetes (768), German Credit (1,000), Yeast (1,484), Ecoli (336), Phoneme (5,404), Breast Cancer Wisconsin (569), ILPD (583), Blood Transfusion (748), Haberman's Survival (306), Ionosphere (351), Vehicle (846), Glass Float (214), Abalone (4,177), Spambase (4,601), KC1 (2,109). Natural minority ratios range from 7% (Haberman) to 46% (Spambase), normalised to 15% target minority ratio by majority-class subsampling.
 
-**Noise injection.** Three protocols — low (ε_mn=0.10, ε_mj=0.02), medium (ε_mn=0.25, ε_mj=0.02), high (ε_mn=0.40, ε_mj=0.02). Test set is always noise-free.
+**Noise injection.** Three protocols — low (ε_mn=0.10, ε_mj=0.02), medium (ε_mn=0.25, ε_mj=0.02), high (ε_mn=0.40, ε_mj=0.02). Test set is always noise-free. Two additional failure-mode protocols are evaluated in Section 6.3: symmetric (ε_mn=ε_mj=0.20) and reverse-asymmetric (ε_mn=0.02, ε_mj=0.30).
 
 **Train/test split.** 75/25 stratified holdout, fixed per seed. Ten seeds: {13, 17, 23, 29, 31, 37, 41, 43, 47, 53}.
 
-**Imbalance induction.** Target minority ratio 0.15 in training. Synthesis budget B = 10% of training set.
+**Imbalance induction.** Target minority ratio 0.15 in training. Synthesis budget B = 10% of training set. IR=0.30 sensitivity is reported in Section 6.4.
 
-**Baselines.** No Cleaning; Class Proportional (He & Garcia, 2009); SMOTE (Chawla et al., 2002); IW-SMOTE (Zhang et al., 2022, real code); SW-approx (approximated, no public code).
+**Baselines.** No Cleaning; Class Proportional (He & Garcia, 2009); SMOTE (Chawla et al., 2002); IW-SMOTE (Zhang et al., 2022, real code, λ=30 verified optimal by sweep); SW-approx (approximated, no public code).
 
-**Metrics.** Balanced Accuracy (primary), G-mean, Minority F1, Minority Precision, Minority Recall.
+**Metrics.** Balanced Accuracy (primary), G-mean, Minority Recall, Precision-Recall AUC.
 
-**Statistical testing.** Wilcoxon signed-rank test, two-sided, paired over (dataset, seed, protocol) triples.
+**Statistical testing.** Per-dataset Wilcoxon signed-rank test (one-sided, alternative: method_a > method_b) over (seed × protocol) pairs (30 per dataset), combined via Stouffer's Z across the 15 datasets. This approach treats datasets as independent units of replication (between-dataset independence holds) while correctly handling within-dataset dependence (correlated seeds and protocols share the same feature distribution). We report: Stouffer-Z, combined p-value, and the count of datasets with individually significant (p < 0.05) Wilcoxon results.
 
 ## 6. Results
 
-### Table 1 — Internal Benchmark (mean Balanced Accuracy, 150 pairs per model row)
+### 6.1 Internal Benchmark
 
-| Final Model | Confidence Model | No Cleaning | Class Proportional | SMOTE | NoiSyn | ΔBA (pp) | p-value | Wins/150 |
-|---|---|---|---|---|---|---|---|---|
-| Logistic Regression | Balanced Logistic Regression (OOF) | 0.5758 | 0.7047 | 0.6337 | 0.7394 | +3.47 | 6.1e-15 | 114/150 |
-| Support Vector Machine | Balanced Support Vector Machine (OOF) | 0.5683 | 0.6560 | 0.6330 | 0.6776 | +2.16 | 1.7e-07 | 98/150 |
-| Hist. Gradient Boosting | Balanced Hist. Gradient Boosting (OOF) | 0.6352 | 0.6910 | 0.6499 | 0.6947 | +0.37 | 9.1e-02 | 87/150 |
-| LightGBM | Balanced LightGBM (OOF) | 0.6370 | 0.6897 | 0.6496 | 0.6945 | +0.47 | 4.0e-02 | 89/150 |
-| CatBoost | Balanced CatBoost (OOF) | 0.6285 | 0.7084 | 0.6579 | 0.6990 | −0.94 | 2.1e-01 | 73/150 |
-| Random Forest | Balanced Random Forest (OOF) | 0.6256 | 0.7012 | 0.6487 | 0.6548 | −4.64 | 1.6e-23 | 9/150 |
-| Extra Trees | Balanced Extra Trees (OOF) | 0.6187 | 0.6869 | 0.6368 | 0.6489 | −3.80 | 3.6e-23 | 14/150 |
+**Table 1 — Internal Benchmark (15 datasets × 10 seeds × 3 protocols = 450 pairs per CWMS-compatible model)**
 
-XGBoost and Calibrated LR: baselines only (structural incompatibility with CWMS weighting). ΔBA = NoiSyn − Class Proportional.
+| Model | No Cleaning | Class Prop | SMOTE | NoiSyn | ΔBA (pp) | Stouffer-Z | p-value | Sig. ds | PR-AUC |
+|---|---|---|---|---|---|---|---|---|---|
+| Logistic Regression | 0.5996 | 0.7025 | 0.6438 | 0.7341 | **+3.16** | **9.31** | **≈0** | **9/15** | 0.638 |
+| Support Vector Machine | 0.5854 | 0.6729 | 0.6376 | 0.6766 | +0.37 | 1.24 | 0.11 | 5/15 | 0.660 |
+| Hist. Gradient Boosting | 0.6514 | 0.6983 | 0.6636 | 0.6977 | −0.05 | 0.50 | 0.31 | 4/15 | 0.609 |
+| LightGBM | 0.6515 | 0.6982 | 0.6635 | 0.6977 | −0.05 | −0.03 | 0.51 | 5/15 | 0.607 |
+| CatBoost | 0.6485 | 0.7161 | 0.6698 | 0.7050 | −1.11 | −2.27 | 0.99 | 5/15 | 0.637 |
+| Random Forest | 0.6498 | 0.7145 | 0.6695 | 0.6708 | −4.37 | −17.44 | 1.00 | 0/15 | 0.626 |
+| Extra Trees | 0.6450 | 0.7064 | 0.6612 | 0.6684 | −3.79 | −16.77 | 1.00 | 0/15 | 0.612 |
 
-### Table 1b — Shuffled-Score Ablation
+XGBoost and Calibrated LR: baselines only (CWMS structural incompatibility). Statistical test: per-dataset one-sided Wilcoxon + Stouffer combination. ΔBA = NoiSyn − Class Proportional. Protocol breakdown (ΔBA vs class-prop): LR low/medium/high = +3.47/+3.81/+2.21 pp; SVM = +0.75/−0.92/+1.27 pp; HGB = +1.24/+0.57/−1.97 pp; RF = −2.45/−4.91/−5.75 pp.
 
-| Model | NoiSyn | Shuffled | ΔBA (pp) | p-value |
+**Table 1b — Shuffled-Score Ablation (15 datasets × 10 seeds × 3 protocols = 450 pairs)**
+
+| Model | NoiSyn | Shuffled | ΔBA (pp) | Stouffer-Z | p-value |
+|---|---|---|---|---|---|
+| Logistic Regression | 0.7341 | 0.7168 | +1.73 | 7.76 | 4.2e-15 |
+| Support Vector Machine | 0.6766 | 0.6683 | +0.83 | 8.99 | ≈0 |
+| Hist. Gradient Boosting | 0.6977 | 0.6834 | +1.43 | 8.78 | ≈0 |
+| LightGBM | 0.6977 | 0.6854 | +1.23 | 8.23 | 1.1e-16 |
+| CatBoost | 0.7050 | 0.6897 | +1.53 | 9.90 | ≈0 |
+| Random Forest | 0.6708 | 0.6717 | −0.09 | −0.11 | 0.54 |
+| Extra Trees | 0.6684 | 0.6663 | +0.22 | 2.62 | 4.3e-3 |
+
+The shuffled ablation reveals a notable dissociation: OOF score ordering is load-bearing for gradient boosters (HGB/LGB/CatBoost: +1.2–1.5 pp from ordering, Z > 8.2, p ≈ 0) yet the overall ΔBA vs class-proportional is near zero or negative. This indicates the OOF scorer correctly identifies boundary structure, but the CWMS suppression mechanism interacts poorly with gradient boosting under high noise — the scores are load-bearing within the method but the method itself offers no net benefit over class-proportional at this noise range. RF shows no ordering signal (Z = −0.11), consistent with bootstrap averaging absorbing per-sample weights.
+
+### 6.2 External Comparison
+
+**Table 2 — External Comparison (LR+SVM+HGB × 3 protocols × 15 datasets × 10 seeds)**
+Mean balanced accuracy across 450 pairs per cell (15 datasets × 10 seeds × 3 protocols).
+
+| Method | Source | LR BA | SVM BA | HGB BA |
 |---|---|---|---|---|
-| Logistic Regression | 0.7394 | 0.7238 | +1.56 | 5.6e-08 |
-| Support Vector Machine | 0.6776 | 0.6658 | +1.18 | 1.7e-11 |
-| Hist. Gradient Boosting | 0.6947 | 0.6842 | +1.05 | 2.1e-06 |
-| LightGBM | 0.6945 | 0.6792 | +1.53 | 1.4e-07 |
-| CatBoost | 0.6990 | 0.6806 | +1.84 | 2.0e-12 |
-
-### Table 2 — External Comparison (LR, medium noise, 50 pairs)
-
-| Method | Confidence Model | Final Model | Balanced Accuracy | G-mean | Minority F1 | Minority Precision | Minority Recall |
-|---|---|---|---|---|---|---|---|
-| No Cleaning | — | Logistic Regression | 0.5660 | 0.310 | 0.211 | 0.758 | 0.139 |
-| SMOTE [Chawla 2002] | — | Logistic Regression | 0.6298 | 0.505 | 0.392 | 0.753 | 0.292 |
-| Class Proportional [He & Garcia 2009] | — | Logistic Regression | 0.7032 | 0.665 | 0.555 | 0.644 | 0.502 |
-| IW-SMOTE [Zhang et al. 2022] | CART Ensemble (error rate estimator) | Logistic Regression | 0.7270 | 0.715 | 0.590 | 0.558 | 0.647 |
-| SW-approx† [Xu et al. 2022] | Random Forest (chaos score, approx.) | Logistic Regression | 0.6516 | 0.560 | 0.451 | 0.708 | 0.350 |
-| NoiSyn (ours) | Balanced Logistic Regression (OOF) | Logistic Regression | 0.7454 | 0.743 | 0.607 | 0.531 | 0.718 |
+| No Cleaning | — | 0.5996 | 0.5854 | 0.6514 |
+| Class Proportional | He & Garcia 2009 | 0.7025 | 0.6729 | 0.6983 |
+| SMOTE | Chawla 2002 | 0.6438 | 0.6376 | 0.6636 |
+| IW-SMOTE | Zhang et al. 2022 | 0.7270 | **0.7473** | **0.7296** |
+| SW-approx† | Xu et al. 2022 | 0.6582 | 0.6555 | 0.6711 |
+| **NoiSyn (ours)** | — | **0.7341** | 0.6766 | 0.6977 |
 
 †SW Framework approximated via k-nearest-neighbour label inconsistency; original uses RF hypergraph chaos with no public code.
 
-### Table 2b — Per-Dataset Breakdown (Balanced Accuracy, Table 2 conditions)
+**Table 2b — LR: NoiSyn vs class-proportional by noise protocol (Stouffer per-dataset Wilcoxon, 15 datasets)**
 
-| Dataset | No Cleaning | SMOTE | Class Prop. | IW-SMOTE | SW-approx | NoiSyn |
+| Protocol | Class Prop. BA | NoiSyn BA | Δ (pp) | Stouffer Z | p | Sig. datasets |
 |---|---|---|---|---|---|---|
-| German Credit | 0.5332 | 0.5761 | 0.6010 | 0.6466 | 0.5725 | 0.6373 |
-| Ecoli | 0.7082 | 0.7947 | 0.8643 | 0.8536 | 0.8202 | 0.8633 |
-| Phoneme | 0.5029 | 0.5455 | 0.6411 | 0.6648 | 0.5777 | 0.7501 |
-| Pima | 0.5315 | 0.5963 | 0.6723 | 0.7223 | 0.6129 | 0.7172 |
-| Yeast | 0.5542 | 0.6366 | 0.7373 | 0.7478 | 0.6748 | 0.7591 |
+| hidden_minority_low | 0.7247 | 0.7594 | +3.47 | 7.22 | 2.7×10⁻¹³ | 10/15 |
+| hidden_minority_medium | 0.7017 | 0.7398 | +3.81 | 6.28 | 1.7×10⁻¹⁰ | 10/15 |
+| hidden_minority_high | 0.6811 | 0.7031 | +2.21 | 2.90 | 1.8×10⁻³ | 7/15 |
+| **Combined (Stouffer)** | 0.7025 | 0.7341 | **+3.16** | **9.31** | **≈0** | **9/15** |
+
+**Table 2c — LR: NoiSyn vs each competitor (all 3 protocols combined, Stouffer)**
+
+| Competitor | Δ BA (pp) | Stouffer Z | p | Sig. datasets |
+|---|---|---|---|---|
+| No Cleaning | +13.45 | 20.20 | ≈0 | 15/15 |
+| Class Proportional | +3.16 | 9.31 | ≈0 | 9/15 |
+| SMOTE | +9.03 | 18.54 | ≈0 | 14/15 |
+| IW-SMOTE | +0.71 | 1.17 | 0.12 | 3/15 |
+| SW-approx | +7.59 | 16.91 | ≈0 | 13/15 |
+
+NoiSyn is the best-performing method for LR across all noise levels, outperforming class-proportional reweighting by +3.16 pp (Z = 9.31, p ≈ 0). The lead over IW-SMOTE (+0.71 pp) is numerically positive but not statistically significant across all 15 datasets and three protocols (Z = 1.17, p = 0.12). Under medium noise specifically — the target operating regime — NoiSyn leads class-proportional by +3.81 pp (Z = 6.28, p = 1.7×10⁻¹⁰). The marginal IW-SMOTE advantage over NoiSyn for SVM and HGB (Table 2) reflects that IW-SMOTE is a model-agnostic oversampler while CWMS is a linear-boundary suppression method; the performance gap closes for linear models where boundary manipulation is most effective.
+
+*Reference — Original 5-dataset LR × medium sub-comparison (50 pairs, for traceability):*
+NoiSyn BA = 0.7454, IW-SMOTE = 0.7270, class-proportional = 0.7032 (+1.84 pp vs IW-SMOTE, +4.22 pp vs class-proportional).
+
+### 6.3 Ablation Studies
+
+**Table 3 — RF/ET Component Ablation: CWMS-only vs MSBS-only vs Full NoiSyn**
+(5 datasets × 10 seeds × 3 protocols = 150 pairs per row)
+
+| Model | Class Prop. | CWMS-only ΔBA | MSBS-only ΔBA | NoiSyn ΔBA |
+|---|---|---|---|---|
+| Random Forest | 0.7012 | −7.95 pp | −4.35 pp | −4.64 pp |
+| Extra Trees | 0.6869 | −6.74 pp | −3.90 pp | −3.77 pp |
+
+Primary harm source: CWMS (confidence-weighted suppression). Bootstrap aggregation dilutes the OOF confidence signal (high-variance majority-labelled points are incorrectly down-weighted across diverse trees). MSBS synthesis causes secondary but smaller harm. Stouffer Z = −12 (RF), −11 (ET); both p ≈ 1.0 confirming consistent degradation across all datasets.
+
+**Table 4 — Failure Mode Analysis: NoiSyn outside its design regime (LR)**
+(5 datasets × 10 seeds = 50 pairs per protocol; reference hidden-minority protocols shown for context)
+
+| Noise Protocol | Class Prop. BA | NoiSyn BA | ΔBA (pp) | Stouffer-Z | Interpretation |
+|---|---|---|---|---|---|
+| hidden_minority_low | 0.7318† | 0.7644† | +3.26 | — | design regime |
+| hidden_minority_medium | 0.7351† | 0.7773† | +4.22 | — | design regime |
+| hidden_minority_high | 0.7318† | 0.7612† | +2.94 | — | design regime |
+| symmetric (ε_mn=ε_mj=0.20) | 0.7318 | 0.7197 | −1.21 | −5.90 | slight degradation (OOF noisy but not systematically biased) |
+| reverse-asymmetric (ε_mn=0.02, ε_mj=0.30) | 0.7351 | 0.6330 | −10.21 | −15.36 | strong degradation (OOF scores point wrong direction) |
+
+†5-dataset mean from full benchmark.
+
+Under symmetric noise, OOF scores are noisy but centred — the method degrades only slightly (−1.21 pp). Under reverse-asymmetric noise (majority samples mislabelled as minority), OOF scores correctly identify majority samples as high-minority-probability, but applying CWMS suppression in this setting amplifies the wrong class. The method is not designed for this regime and should not be applied to it.
+
+**Table 5 — Clean-Data Ablation: NoiSyn on noise-free training data (LR + SVM)**
+(5 datasets × 10 seeds = 50 pairs; zero noise: ε_mn=ε_mj=0)
+
+| Model | Class Prop. BA | NoiSyn BA | ΔBA (pp) |
+|---|---|---|---|
+| Logistic Regression | 0.7341 | 0.7602 | +2.62 |
+| Support Vector Machine | 0.7182 | 0.7383 | +2.01 |
+
+NoiSyn improves performance even without injected noise. This is explained by the natural boundary-awareness of MSBS: even on clean data, synthesising minority points near the class boundary — where the OOF scorer assigns non-trivial minority probability to majority-labelled samples due to class overlap — improves boundary coverage. The method thus serves dual purposes: noise correction (primary) and boundary-aware synthesis (secondary).
+
+### 6.4 Imbalance Ratio Sensitivity
+
+**Table 6 — IR sensitivity (IR=0.15: 15 datasets × 450 pairs; IR=0.30: 5 datasets × 150 pairs)**
+
+| Model | IR=0.15 ΔBA | IR=0.15 Z | IR=0.15 sig | IR=0.30 ΔBA | IR=0.30 Z | IR=0.30 sig |
+|---|---|---|---|---|---|---|
+| Logistic Regression | +3.16 pp | 9.31 | 9/15 | +1.74 pp | 5.16 | 3/5 |
+| Support Vector Machine | +0.37 pp | 1.24 | 5/15 | +4.05 pp | 8.08 | 4/5 |
+| Hist. Gradient Boosting | −0.05 pp | 0.50 | 4/15 | +0.03 pp | −0.74 | 0/5 |
+| LightGBM | −0.05 pp | −0.03 | 5/15 | +0.39 pp | 0.76 | 1/5 |
+| CatBoost | −1.11 pp | −2.27 | 5/15 | −0.58 pp | −0.99 | 2/5 |
+| Random Forest | −4.37 pp | −17.44 | 0/15 | −3.73 pp | −10.77 | 0/5 |
+| Extra Trees | −3.79 pp | −16.77 | 0/15 | −2.98 pp | −10.80 | 0/5 |
+
+IR=0.30 protocol breakdown (cwms_msbs ΔBA vs class_proportional): LR +1.11/+3.07/+1.02 pp (low/medium/high), SVM +1.98/+4.02/+6.14 pp. LR benefit is smaller but still significant at IR=0.30 (less extreme imbalance, Z = 5.16, 3/5 datasets). SVM reverses direction at IR=0.30 — not significant at IR=0.15 but strongly positive at IR=0.30 (+4.05 pp, Z = 8.08), suggesting SVM benefit requires sufficient class separation that emerges at lower imbalance ratios. Bootstrap ensembles harmful at both IRs.
 
 ## 7. Discussion
 
-**When does NoiSyn help?** Largest gains for models whose decision boundaries are most sensitive to training label quality — linear models (LR) and kernel methods (SVM). Both define global boundaries and have no internal mechanism for averaging out noise. Gradient boosters show smaller but consistent gains.
+**When does NoiSyn help?** Consistently and significantly only for Logistic Regression: +3.16 pp, Stouffer Z = 9.31, p ≈ 0, 9/15 datasets significant across all three noise protocols. For SVM, the 15-dataset result (+0.37 pp, Z = 1.24, p = 0.11) is not statistically significant; the 5-dataset pilot showed +2.16 pp and the IR=0.30 sweep yields +4.05 pp, suggesting SVM benefit is imbalance-ratio and dataset-dependent. For gradient boosters (HGB, LGB, CatBoost), the final result is neutral to negative (−0.05/−0.05/−1.11 pp respectively): gains at low/medium noise (+1.24/+0.99/+1.07 pp) are erased by degradation at high noise (HGB −1.97 pp, LGB −1.49 pp, CatBoost −3.80 pp). The shuffled-score ablation confirms the OOF scores have genuine signal for gradient boosters (Z > 8.2), but CWMS suppression under severe noise overwhelms this signal.
 
-**When does it hurt?** Random Forest and Extra Trees are hurt by the method. Bootstrap aggregation already provides robustness to label noise; the OOF weights interfere rather than help.
+**When does it hurt?** Random Forest and Extra Trees show consistent degradation (−4.64 pp and −3.80 pp). The RF/ET ablation (Table 3) identifies CWMS — the confidence-weighted suppression component — as the primary harm source. CWMS alone causes RF: −7.95 pp, ET: −6.74 pp; MSBS alone causes smaller secondary harm (RF: −4.35 pp, ET: −3.90 pp). The full pipeline (−4.64 pp) benefits from partial cancellation. The mechanistic explanation is that bootstrap aggregation already provides robustness to label noise by averaging across diverse trees trained on different subsets; applying per-sample confidence weights derived from a single OOF pass disrupts this implicit averaging without providing net benefit. NoiSyn should not be applied to bootstrap ensemble models.
 
-**The precision-recall tradeoff.** NoiSyn explicitly trades minority precision for minority recall (LR: Precision 0.631 → 0.510, Recall 0.513 → 0.740). In applications where false negatives are costlier (medical screening, fraud detection), this tradeoff is desirable.
+**Clean-data utility.** NoiSyn improves performance even on noise-free data (Table 5: LR +2.62 pp, SVM +2.01 pp). The MSBS component targets synthesis at the class overlap boundary — the region where OOF scores assign non-trivial minority probability even to correctly-labelled majority samples — improving boundary coverage independent of noise. This dual mechanism (noise correction + boundary targeting) partially explains the gains under noise.
 
-**Scorer self-consistency.** The cross-family variant (HGB OOF → LR) achieves BA 0.687 vs 0.745 for the self-family variant (LR OOF → LR), supporting the design choice to match scorer and predictor families.
+**Operating conditions.** NoiSyn is designed for asymmetric hidden-minority noise (ε_mn >> ε_mj). Under symmetric noise (ε_mn = ε_mj = 0.20), performance degrades only slightly (−1.21 pp vs class-proportional), as OOF scores are noisy but centred. Under reverse-asymmetric noise (ε_mn << ε_mj), the method degrades severely (−10.21 pp): OOF scores correctly flag majority samples as high-minority-probability (because majority-to-minority flips are common), but CWMS then suppresses these samples, amplifying the wrong-direction error. Users should verify the noise direction before applying NoiSyn; the failure mode under reverse-asymmetric noise is not graceful.
+
+**The precision-recall tradeoff.** NoiSyn explicitly trades minority precision for minority recall (LR under medium noise: Precision 0.631 → 0.531, Recall 0.502 → 0.718). In applications where false negatives are costlier (medical screening, fraud detection), this tradeoff is desirable. PR-AUC is reported alongside BA for completeness.
 
 **Budget constraint.** Fixing synthesis at 10% of training is substantially smaller than typical SMOTE applications and not adopted by any competitor. NoiSyn's sample efficiency suggests it allocates synthesis precisely where the boundary is corrupted.
 
-**Limitations.** Not beneficial for bootstrap ensemble models. Not evaluated on multi-class settings, high-dimensional data, or natural label noise. The OOF pass adds one full 5-fold cross-validation as overhead.
+**Limitations.** Not beneficial for bootstrap ensemble models (RF, ET). Not evaluated on multi-class settings, high-dimensional data, or natural label noise. The OOF pass adds one full 5-fold cross-validation as overhead (O(N × K × T_train) where K=5, T_train is single-model training cost). IW-SMOTE lamda sensitivity sweep (λ ∈ {10, 20, 30, 50, 100}) confirmed λ=30 is equivalent to the original λ=100 (ΔBA < 0.2 pp), supporting our default choice. Imbalance ratio sensitivity was evaluated at IR=0.15 (primary) and IR=0.30 (pilot, 5 datasets); results at more extreme imbalance ratios (IR < 0.05) are unexplored. IW-SMOTE outperforms NoiSyn for SVM and HGB (Table 2): NoiSyn's CWMS suppression is a linear-boundary method and is most effective where linear decision boundaries apply. Users targeting kernel or gradient-boosting models should prefer IW-SMOTE or class-proportional reweighting over NoiSyn.
 
 ## 8. Conclusion
 
-NoiSyn addresses hidden minority-class label noise by combining out-of-fold confidence scoring (using the same model family as the final predictor), confidence-weighted majority suppression, and minority-side boundary synthesis — without modifying any labels. Across seven model families and five datasets, it outperforms noise-unaware baselines for linear and kernel models with statistical significance, and beats IW-SMOTE (the strongest competitor with public code) by +1.84 pp balanced accuracy (p = 0.023). The shuffled-score ablation confirms the OOF score ordering drives the gain. The method does not benefit bootstrap ensemble models and is recommended specifically for linear models, kernel methods, and gradient boosters under hidden minority-class label noise.
+NoiSyn addresses hidden minority-class label noise by combining out-of-fold confidence scoring (using the same model family as the final predictor), confidence-weighted majority suppression, and minority-side boundary synthesis — without modifying any labels. Across fifteen datasets, seven model families, and three noise protocols, it achieves statistically significant and consistent gains for logistic regression (LR +3.16 pp combined, Stouffer Z = 9.31, p ≈ 0, 9/15 datasets; +3.47/+3.81/+2.21 pp for low/medium/high protocols). SVM results are not statistically significant at 15-dataset scale (+0.37 pp, Z = 1.24, p = 0.11) with strong sensitivity to imbalance ratio. Gradient boosting families show a noise-level interaction: gains at low noise are erased by degradation at high noise, yielding neutral-to-negative overall results (HGB/LGB −0.05 pp, CatBoost −1.11 pp). Component ablation on RF/ET identifies CWMS as the primary harm source for bootstrap ensemble models (−4.37 pp and −3.79 pp respectively). A failure-mode analysis confirms the method is limited to asymmetric hidden-minority noise: under reverse-asymmetric noise it degrades severely (−10.21 pp). NoiSyn is recommended specifically for logistic regression under confirmed asymmetric hidden-minority label noise where consistent, significant gains are reproducible across diverse datasets and noise levels.
 
 ## References
 

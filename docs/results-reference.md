@@ -98,14 +98,100 @@ IW-SMOTE best on pima (+0.5 pp over NoiSyn), credit-g (+0.9 pp over NoiSyn).
 
 ---
 
-## Key Statistical Summary
+## Key Statistical Summary (5-dataset run, old methodology)
 
-- LR: NoiSyn vs class_prop → +3.47 pp, p=6.08e-15, 114/150 wins
-- SVM: NoiSyn vs class_prop → +2.16 pp, p=1.72e-07, 98/150 wins
-- LightGBM: NoiSyn vs class_prop → +0.47 pp, p=4.03e-02, 89/150 wins
-- HGB: NoiSyn vs class_prop → +0.37 pp, p=9.09e-02 (not significant)
-- CatBoost: NoiSyn vs class_prop → −0.94 pp, p=2.05e-01 (not significant)
-- RF: NoiSyn vs class_prop → −4.64 pp, p=1.58e-23 (significant negative)
-- ET: NoiSyn vs class_prop → −3.80 pp, p=3.65e-23 (significant negative)
-- NoiSyn vs IW-SMOTE (LR, medium): +1.84 pp, p=0.023
-- Shuffled ablation: all 5 compatible families significant (min p=1.66e-11)
+- LR: NoiSyn vs class_prop → +3.47 pp, Stouffer Z=7.30, p=1.5e-13, 3/5 sig datasets
+- SVM: NoiSyn vs class_prop → +2.16 pp, Stouffer Z=5.01, p=2.8e-07, 2/5 sig datasets
+- LightGBM: NoiSyn vs class_prop → +0.47 pp, Stouffer Z=2.23, p=1.3e-02, 1/5 sig datasets
+- HGB: NoiSyn vs class_prop → +0.37 pp, Stouffer Z=1.80, p=3.6e-02, 2/5 sig datasets
+- CatBoost: NoiSyn vs class_prop → −0.94 pp, Stouffer Z=−0.71, p=7.6e-01, 2/5 sig datasets
+- RF: NoiSyn vs class_prop → −4.64 pp, Stouffer Z=−12.12, p=1.0e+00, 0/5 sig datasets
+- ET: NoiSyn vs class_prop → −3.80 pp, Stouffer Z=−11.30, p=1.0e+00, 0/5 sig datasets
+- NoiSyn vs IW-SMOTE (LR, medium, 5 datasets): +1.84 pp
+- Shuffled ablation (Stouffer): LR Z=5.09, SVM Z=6.96, HGB Z=5.29
+
+Note: old "p-values" from aggregate Wilcoxon on 150 i.i.d. pairs are DEPRECATED.
+Current method: per-dataset Wilcoxon + Stouffer's Z (per CLAUDE.md statistical approach).
+
+---
+
+## Phase 2 Ablation Results (CONFIRMED, 2026-05-23)
+
+### RF/ET Component Ablation (outputs/rfet-ablation-sweep.csv, 1500 rows)
+(5 datasets × 10 seeds × 3 protocols × 5 methods × 2 models = 1500 rows)
+
+| Model | Class Prop. | CWMS-only ΔBA | MSBS-only ΔBA | NoiSyn ΔBA | Stouffer Z |
+|---|---|---|---|---|---|
+| Random Forest | 0.7012 | −7.95 pp | −4.35 pp | −4.64 pp | −11.56 |
+| Extra Trees | 0.6869 | −6.74 pp | −3.90 pp | −3.77 pp | −11.29 |
+
+Primary harm source: CWMS (confidence-weighted suppression). MSBS causes secondary harm.
+
+### Failure Mode Analysis (outputs/failure-mode-sweep.csv, 400 rows)
+(5 datasets × 10 seeds × 2 protocols × 4 methods × 1 model(LR) = 400 rows)
+
+| Protocol | Class Prop. BA | NoiSyn BA | ΔBA (pp) | Stouffer Z |
+|---|---|---|---|---|
+| symmetric (ε_mn=ε_mj=0.20) | 0.7318 | 0.7197 | −1.21 | −5.90 |
+| reverse_asymmetric (ε_mn=0.02, ε_mj=0.30) | 0.7351 | 0.6330 | −10.21 | −15.36 |
+
+Method is not designed for these regimes. reverse_asymmetric causes severe degradation.
+
+### Clean-Data Ablation (outputs/clean-data-ablation.csv, 400 rows)
+(5 datasets × 10 seeds × 4 methods × 2 models(LR+SVM) = 400 rows; zero noise)
+
+| Model | Class Prop. BA | NoiSyn BA | ΔBA (pp) |
+|---|---|---|---|
+| Logistic Regression | 0.7341 | 0.7602 | +2.62 |
+| Support Vector Machine | 0.7182 | 0.7383 | +2.01 |
+
+NoiSyn improves even without noise — boundary-aware synthesis targeting class overlap region.
+
+### IW-SMOTE λ Sensitivity (outputs/iw-lamda-sweep.csv)
+λ=100 vs λ=30: ΔBA = −0.15 pp → keep λ=30 (gate passed, no change needed).
+
+---
+
+## Phase 5 Confirmed Results (2026-05-23, COMPLETE — 8,100 rows)
+
+### Table 2 — Expanded External Comparison (3 models × 3 protocols × 15 datasets)
+
+Mean BA across 450 pairs (15 ds × 10 seeds × 3 protocols):
+
+| Method | LR BA | SVM BA | HGB BA |
+|---|---|---|---|
+| no_cleaning | 0.5996 | 0.5854 | 0.6514 |
+| class_proportional | 0.7025 | 0.6729 | 0.6983 |
+| smote | 0.6438 | 0.6376 | 0.6636 |
+| iw_smote | 0.7270 | **0.7473** | **0.7296** |
+| sw_framework | 0.6582 | 0.6555 | 0.6711 |
+| **cwms_msbs (NoiSyn)** | **0.7341** | 0.6766 | 0.6977 |
+
+### LR Stouffer Tests (cwms_msbs vs class_proportional, 15 datasets)
+
+| Protocol | Δ (pp) | Stouffer Z | p | Sig. ds |
+|---|---|---|---|---|
+| low | +3.47 | 7.22 | 2.7e-13 | 10/15 |
+| medium | +3.81 | 6.28 | 1.7e-10 | 10/15 |
+| high | +2.21 | 2.90 | 1.8e-3 | 7/15 |
+| **combined** | **+3.16** | **9.31** | **≈0** | **9/15** |
+
+### LR Stouffer Tests (cwms_msbs vs each competitor, combined)
+
+| Competitor | Δ (pp) | Z | p | Sig. ds |
+|---|---|---|---|---|
+| no_cleaning | +13.45 | 20.20 | ≈0 | 15/15 |
+| class_proportional | +3.16 | 9.31 | ≈0 | 9/15 |
+| smote | +9.03 | 18.54 | ≈0 | 14/15 |
+| iw_smote | +0.71 | 1.17 | 0.12 | 3/15 |
+| sw_framework | +7.59 | 16.91 | ≈0 | 13/15 |
+
+Note: IW-SMOTE comparison NOT significant (p=0.12) across all 15 ds × 3 protocols. Under medium noise specifically: +3.81pp vs class_prop (significant). IW-SMOTE outperforms NoiSyn for SVM/HGB (model-agnostic oversample vs linear-boundary method).
+
+## Phase 3-4 Status (as of 2026-05-23, sweeps running)
+
+| Phase | Description | Output CSV | Target rows | Status |
+|---|---|---|---|---|
+| 3 | 15-dataset full benchmark | full-benchmark-solution-v2.csv | 24,750 | RUNNING (~24% done) |
+| 4 | IR=0.30 sensitivity (5-ds pilot) | full-benchmark-ir030-solution.csv | 8,250 | RUNNING (~28% done) |
+| 5 | Expanded competitor (LR+SVM+HGB×3 protos×15ds) | competitor-headtohead-expanded.csv | 8,100 | **COMPLETE** |
