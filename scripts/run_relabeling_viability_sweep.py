@@ -25,6 +25,8 @@ from pipeline.baselines.soft_weighting import (
     confidence_weighted_sample_weights,
     confidence_weighted_sample_weights_balanced,
 )
+from pipeline.baselines.iw_smote import iw_smote
+from pipeline.baselines.sw_framework import sw_framework_oversample
 from pipeline.baselines.cleanlab_baselines import select_cleanlab_filter
 from pipeline.baselines.confidence_relabeling import (
     naive_confidence_majority_scores,
@@ -43,6 +45,7 @@ from pipeline.models.factories import (
     model_supports_sample_weight,
 )
 from pipeline.scoring.balanced_oof import balanced_oof_majority_scores
+from pipeline.scoring.knn_ratio import knn_ratio_majority_scores
 from pipeline.scoring.oof_loss import out_of_fold_loss
 
 DATASETS = ["pima", "credit-g", "yeast", "phoneme", "ecoli"]
@@ -62,10 +65,13 @@ IMBALANCE_RATIOS = [0.15, 0.30]
 QUICK_RATIOS = [0.15]
 METHODS = [
     # === PAPER METHODS (primary contribution) ===
-    "cwms_msbs",        # combined: MSBS synthesis + CWMS weights (our method)
+    "cwms_msbs",        # NoiSyn: confidence-weighted majority suppression + minority-side boundary synthesis
     "cwms_msbs_shuffled",  # shuffled-score ablation: proves OOF scores are load-bearing
     "msbs",             # MSBS standalone (ablation)
     "cwms",             # CWMS standalone (ablation)
+
+    # === OVERSAMPLING BASELINES ===
+    "smote",            # noise-unaware SMOTE (Chawla 2002) — universal paper baseline
 
     # === BASELINES (deletion-based) ===
     "no_cleaning",      # train on noisy data, no correction
@@ -215,6 +221,22 @@ def run_single_viability(dataset_name, model_name, seed, noise_name, mn, mj, bud
         if "naive_confidence_relabel" in methods_to_run else None
     )
 
+    # k-NN ratio scores for scorer comparison (lazy: only when needed)
+    knn_scores = (
+        knn_ratio_majority_scores(X_tr, y_noisy, minority_label, majority_label, k=5)
+        if any(m.startswith("cwms_msbs_knn") for m in methods_to_run)
+        else None
+    )
+
+    # Cross-family OOF scores: HGB scorer → any final model (lazy: only when needed)
+    crossfamily_scores = None
+    if any(m.startswith("cwms_msbs_crossfamily") for m in methods_to_run):
+        hgb_factory = make_model_factory("hgb", seed, cat_indices, balanced=True, use_gpu=use_gpu)
+        crossfamily_scores = balanced_oof_majority_scores(
+            X_tr, y_noisy, hgb_factory, minority_label, majority_label, 5, seed,
+            use_sample_weight=False,
+        )
+
     rows = []
     for method in (methods or METHODS):
         row = _run_method(
@@ -223,6 +245,7 @@ def run_single_viability(dataset_name, model_name, seed, noise_name, mn, mj, bud
             minority_label, majority_label, rng, seed,
             bal_factory=bal_factory, use_sw=use_sw,
             model_name=model_name, cwms_factory=cwms_factory, spw=spw,
+            knn_scores=knn_scores, crossfamily_scores=crossfamily_scores,
         )
         row.update({
             "dataset": dataset_name, "model": model_name, "seed": seed,
@@ -237,7 +260,8 @@ def run_single_viability(dataset_name, model_name, seed, noise_name, mn, mj, bud
 
 def _run_method(method, X_tr, y_noisy, y_tr, noisy_mask, X_te, y_te, factory,
                 suspiciousness, bal_scores, unbal_scores, naive_scores, budget, min_label, maj_label, rng, seed,
-                bal_factory=None, use_sw=False, model_name=None, cwms_factory=None, spw=1.0):
+                bal_factory=None, use_sw=False, model_name=None, cwms_factory=None, spw=1.0,
+                knn_scores=None, crossfamily_scores=None):
     if method == "no_cleaning":
         return evaluate_augmented(X_tr, y_noisy, X_te, y_te, factory, min_label)
     if method == "class_weight_only":
@@ -354,6 +378,69 @@ def _run_method(method, X_tr, y_noisy, y_tr, noisy_mask, X_te, y_te, factory,
                                    min_label, n_synthetic=n_synth,
                                    relabel_correctness=float("nan"),
                                    sample_weight=sw_combined)
+    if method == "smote":
+        from imblearn.over_sampling import SMOTE as ImbSMOTE
+        n_min = int(np.sum(y_noisy == min_label))
+        n_maj = int(np.sum(y_noisy == maj_label))
+        target = min(n_min + budget, n_maj)
+        if n_min < 2 or target <= n_min:
+            return evaluate_augmented(X_tr, y_noisy, X_te, y_te, factory, min_label,
+                                       n_synthetic=0, relabel_correctness=float("nan"))
+        try:
+            smote = ImbSMOTE(
+                sampling_strategy={min_label: target},
+                k_neighbors=min(5, n_min - 1),
+                random_state=seed,
+            )
+            X_aug, y_aug = smote.fit_resample(X_tr, y_noisy)
+            n_synth = len(y_aug) - len(y_noisy)
+        except Exception:
+            return evaluate_augmented(X_tr, y_noisy, X_te, y_te, factory, min_label,
+                                       n_synthetic=0, relabel_correctness=float("nan"))
+        return evaluate_augmented(X_aug, y_aug, X_te, y_te, factory, min_label,
+                                   n_synthetic=n_synth, relabel_correctness=float("nan"))
+    if method in ("cwms_msbs_knn", "cwms_msbs_crossfamily"):
+        if model_name in ("calibrated_lr", "xgboost"):
+            return _nan_skip_row()
+        # Select score array based on scorer variant
+        if method == "cwms_msbs_knn":
+            scores_for_method = knn_scores.copy() if knn_scores is not None else bal_scores.copy()
+        else:  # cwms_msbs_crossfamily
+            if model_name == "hgb":
+                return _nan_skip_row()  # same-family, not cross-family
+            scores_for_method = crossfamily_scores.copy() if crossfamily_scores is not None else bal_scores.copy()
+        X_aug, y_aug, n_synth = minority_side_boundary_synthesis(
+            X_tr, y_noisy, scores_for_method, budget, min_label, maj_label, seed=seed,
+        )
+        use_balanced = model_name in ("lightgbm", "catboost", "hgb")
+        if use_balanced:
+            sw_orig = confidence_weighted_sample_weights_balanced(
+                y_noisy, scores_for_method, maj_label, spw,
+            )
+            sw_synth = np.full(n_synth, float(spw))
+            fact = cwms_factory or factory
+        else:
+            sw_orig = confidence_weighted_sample_weights(y_noisy, scores_for_method, maj_label)
+            sw_synth = np.ones(n_synth, dtype=float)
+            fact = factory
+        sw_combined = np.concatenate([sw_orig, sw_synth])
+        return evaluate_augmented(X_aug, y_aug, X_te, y_te, fact,
+                                   min_label, n_synthetic=n_synth,
+                                   relabel_correctness=float("nan"),
+                                   sample_weight=sw_combined)
+    if method == "iw_smote":
+        X_aug, y_aug, n_synth = iw_smote(
+            X_tr, y_noisy, min_label, maj_label, budget_count=budget,
+            lamda=30, seed=seed,
+        )
+        return evaluate_augmented(X_aug, y_aug, X_te, y_te, factory, min_label,
+                                   n_synthetic=n_synth, relabel_correctness=float("nan"))
+    if method == "sw_framework":
+        X_aug, y_aug, n_synth = sw_framework_oversample(
+            X_tr, y_noisy, min_label, maj_label, budget_count=budget, seed=seed,
+        )
+        return evaluate_augmented(X_aug, y_aug, X_te, y_te, factory, min_label,
+                                   n_synthetic=n_synth, relabel_correctness=float("nan"))
     raise ValueError(f"Unknown method: {method}")
 
 

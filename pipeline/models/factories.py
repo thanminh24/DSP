@@ -11,6 +11,7 @@ from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline, make_pipeline
 from sklearn.preprocessing import StandardScaler
+from sklearn.svm import SVC
 
 
 ModelFactory = Callable[[], object]
@@ -18,7 +19,7 @@ ModelFactory = Callable[[], object]
 
 def list_publication_models(include_optional: bool = True) -> list[str]:
     """Return the planned model families in increasing publication rigor."""
-    models = ["lr", "calibrated_lr", "random_forest", "extra_trees", "hgb"]
+    models = ["lr", "svm", "calibrated_lr", "random_forest", "extra_trees", "hgb"]
     if include_optional:
         for name, package in [
             ("xgboost", "xgboost"),
@@ -39,7 +40,7 @@ def model_supports_sample_weight(model_name: str) -> bool:
     for ranking. Passing sample_weight gives proper per-sample loss reweighting and
     makes the balanced scoring model meaningfully different from the standard one.
     """
-    return model_name in ("hgb", "xgboost")
+    return model_name in ("hgb", "xgboost", "svm")
 
 
 def make_model_factory(
@@ -54,6 +55,8 @@ def make_model_factory(
     cat_indices = cat_indices or []
     if model_name == "lr":
         return lambda: _make_lr(seed, balanced)
+    if model_name == "svm":
+        return lambda: _make_svm(seed, balanced)
     if model_name == "calibrated_lr":
         return lambda: CalibratedClassifierCV(_make_lr(seed, balanced), method="sigmoid", cv=3)
     if model_name == "random_forest":
@@ -76,6 +79,24 @@ def make_model_factory(
     raise ValueError(f"Unknown model_name: {model_name}")
 
 
+def make_cwms_factory(
+    model_name: str,
+    seed: int,
+    cat_indices: list[int] | None = None,
+    use_gpu: bool = False,
+) -> ModelFactory:
+    """Factory with scale_pos_weight=1.0, for CWMS weights carrying the class balance signal.
+
+    For LR: identical to std_factory (LR has no spw).
+    For boosting (xgb, lgbm, catboost, hgb): disables built-in class correction
+    so CWMS balanced weights are the sole correction mechanism.
+    """
+    return make_model_factory(
+        model_name, seed, cat_indices,
+        balanced=False, scale_pos_weight=1.0, use_gpu=use_gpu,
+    )
+
+
 def _make_lr(seed: int, balanced: bool) -> Pipeline:
     return Pipeline([
         ("impute", SimpleImputer(strategy="median")),
@@ -86,6 +107,19 @@ def _make_lr(seed: int, balanced: bool) -> Pipeline:
             random_state=seed,
         )),
     ])
+
+
+def _make_svm(seed: int, balanced: bool) -> Pipeline:
+    return make_pipeline(
+        SimpleImputer(strategy="median"),
+        StandardScaler(),
+        SVC(
+            kernel="rbf",
+            probability=True,
+            class_weight="balanced" if balanced else None,
+            random_state=seed,
+        ),
+    )
 
 
 def _make_rf(seed: int, balanced: bool) -> Pipeline:

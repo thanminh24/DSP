@@ -2,7 +2,13 @@
 from __future__ import annotations
 
 import numpy as np
-from sklearn.metrics import balanced_accuracy_score, f1_score, recall_score
+from sklearn.metrics import (
+    accuracy_score,
+    balanced_accuracy_score,
+    f1_score,
+    precision_score,
+    recall_score,
+)
 
 
 def _pipeline_fit_kwargs(model, sample_weight: np.ndarray) -> dict:
@@ -38,11 +44,16 @@ def evaluate_augmented(
     else:
         model.fit(X_train_aug, y_train_aug)
     y_pred = model.predict(X_test)
+    majority_label = 1 - minority_label
     return {
         "deleted": 0,
         "balanced_accuracy": balanced_accuracy_score(y_test, y_pred),
+        "accuracy": accuracy_score(y_test, y_pred),
         "macro_f1": f1_score(y_test, y_pred, average="macro", zero_division=0),
+        "weighted_f1": f1_score(y_test, y_pred, average="weighted", zero_division=0),
         "minority_recall": recall_score(y_test, y_pred, pos_label=minority_label, zero_division=0),
+        "minority_precision": precision_score(y_test, y_pred, pos_label=minority_label, zero_division=0),
+        "majority_recall": recall_score(y_test, y_pred, pos_label=majority_label, zero_division=0),
         "noise_precision_deleted": float("nan"),
         "clean_minority_deletion_rate": float("nan"),
         "n_relabeled": int(n_relabeled),
@@ -57,8 +68,12 @@ def _nan_result(n_relabeled, n_synthetic, relabel_correctness):
     return {
         "deleted": 0,
         "balanced_accuracy": float("nan"),
+        "accuracy": float("nan"),
         "macro_f1": float("nan"),
+        "weighted_f1": float("nan"),
         "minority_recall": float("nan"),
+        "minority_precision": float("nan"),
+        "majority_recall": float("nan"),
         "noise_precision_deleted": float("nan"),
         "clean_minority_deletion_rate": float("nan"),
         "n_relabeled": int(n_relabeled),

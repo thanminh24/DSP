@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import numpy as np
 from sklearn.metrics import (
+    accuracy_score,
     balanced_accuracy_score,
     f1_score,
+    precision_score,
     recall_score,
 )
 
@@ -33,6 +35,7 @@ def evaluate(
     model = model_factory()
     model.fit(X_train[keep_mask], y_noisy[keep_mask])
     y_pred = model.predict(X_test)
+    majority_label = 1 - minority_label
 
     n_deleted = int(len(selected_idx))
     if n_deleted > 0:
@@ -46,8 +49,12 @@ def evaluate(
     return {
         "deleted": n_deleted,
         "balanced_accuracy": balanced_accuracy_score(y_test, y_pred),
+        "accuracy": accuracy_score(y_test, y_pred),
         "macro_f1": f1_score(y_test, y_pred, average="macro", zero_division=0),
+        "weighted_f1": f1_score(y_test, y_pred, average="weighted", zero_division=0),
         "minority_recall": recall_score(y_test, y_pred, pos_label=minority_label, zero_division=0),
+        "minority_precision": precision_score(y_test, y_pred, pos_label=minority_label, zero_division=0),
+        "majority_recall": recall_score(y_test, y_pred, pos_label=majority_label, zero_division=0),
         "noise_precision_deleted": noise_precision,
         "clean_minority_deletion_rate": cmdr,
     }
