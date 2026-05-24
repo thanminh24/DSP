@@ -1,8 +1,8 @@
-# CLAUDE.md — DSP / NoiSyn Project
+# CLAUDE.md — DSP / COINS Project
 
 ## Project Summary
 
-**NoiSyn** (Noise-Aware OOF Synthesis): a label-corruption-free method for imbalanced tabular classification under *hidden minority label noise* (minority samples mislabeled as majority). Two components:
+**COINS** (Confidence Out-of-fold Imbalanced Noise Synthesis): a label-corruption-free method for imbalanced tabular classification under *hidden minority label noise* (minority samples mislabeled as majority). Two components:
 
 - **CWMS** (Confidence-Weighted Majority Suppression): down-weight suspicious majority-labeled samples via OOF P(minority|x) scores
 - **MSBS** (Minority-Side Boundary Synthesis): synthesize minority samples near the contaminated boundary using confirmed minority seeds
@@ -10,6 +10,8 @@
 Zero label modification. OOF confidence scores feed both components — no extra training cost.
 
 **Claim boundary**: works for LR and SVM (strong, significant). Marginal/neutral for HGB/LGB. Actively hurts RF/ET (OOF signal diluted by bootstrap). Only for hidden-minority asymmetric noise, not symmetric or reverse-asymmetric.
+
+**Paper title**: "COINS: Out-of-Fold Confidence Scoring for Noise-Robust Synthesis in Imbalanced Classification"
 
 ## Python Environment
 
@@ -25,17 +27,18 @@ Zero label modification. OOF confidence scores feed both components — no extra
 |------|---------|
 | `scripts/run_relabeling_viability_sweep.py` | Core sweep dispatcher — all method dispatchers live here |
 | `scripts/run_full_benchmark_solution.py` | Full benchmark runner (all models × methods × protocols × seeds) |
-| `scripts/run_competitor_headtohead.py` | External comparison vs IW-SMOTE, SMOTE, SW-framework |
+| `scripts/run_expanded_competitor_headtohead.py` | External comparison vs IW-SMOTE, SMOTE, SW-framework (15 datasets) |
 | `scripts/download_datasets.py` | One-time OpenML download → `data/*.parquet` |
-| `scripts/analyze_full_benchmark.py` | Table 1 analysis (BA, p-values, effect sizes) |
-| `scripts/analyze_competitor_headtohead.py` | Table 2 analysis |
+| `scripts/analyze_full_benchmark.py` | Table 1 analysis (BA, PR-AUC, per-dataset Wilcoxon+Stouffer) |
+| `scripts/analyze_expanded_competitor_headtohead.py` | Table 2 analysis (15-dataset competitor comparison) |
 | `pipeline/data/loaders.py` | Dataset registry; `load_dataset(name) → (X_df, y_binary, cat_cols, feature_names)` |
 | `pipeline/evaluation/metrics.py` | `evaluate()` — cleaning/weighting methods evaluator |
 | `pipeline/evaluation/augment_metrics.py` | `evaluate_augmented()` — synthesis methods evaluator |
 | `pipeline/models/factories.py` | `make_model_factory(model_name, seed, cat_indices, balanced=False)` |
-| `pipeline/baselines/iw_smote.py` | IW-SMOTE baseline; `lamda=30` in current calls (original paper default: 100) |
+| `pipeline/baselines/iw_smote.py` | IW-SMOTE baseline; `lamda=30` (original paper default: 100; gated by iw-lamda-sweep) |
 | `docs/paper-draft.md` | Full 8-section paper draft |
 | `docs/results-reference.md` | All key numbers consolidated |
+| `docs/COINS-literature-review.xlsx` | 25-paper literature review (2-sheet xlsx) |
 
 ## Critical Code Facts
 
@@ -44,7 +47,7 @@ Zero label modification. OOF confidence scores feed both components — no extra
 **Method keys** (all existing, no new dispatchers):
 - `cwms` — line 336: suppression only, no synthesis
 - `msbs` — line 329: synthesis only, no weight modification
-- `cwms_msbs` — line 352: full pipeline (paper's main method)
+- `cwms_msbs` — line 352: full pipeline (paper's main method = COINS)
 - `oracle_relabel` — line 282: uses ground-truth labels (appendix only, not deployable)
 
 **Dataset loader interface:** `load_dataset(name) -> (X_df, y_binary, cat_cols, feature_names)` — returns parquet-cached data. No live OpenML at experiment time.
@@ -54,24 +57,30 @@ Zero label modification. OOF confidence scores feed both components — no extra
 **Row count math (15 datasets):**
 - 7 CWMS-full models × 7 methods × 3 protocols × 10 seeds × 15 datasets = 22,050
 - 2 baseline-only models × 3 methods × 3 protocols × 10 seeds × 15 datasets = 2,700
-- **Total: 24,750 rows** (existing 5-dataset run = 8,250 = 1,650/dataset × 5 ✓)
+- **Total: 24,750 rows** ✓ (confirmed in `outputs/full-benchmark-solution-v2.csv`)
 
-## Current Datasets (5)
+## Datasets (15)
 
-`["pima", "credit-g", "yeast", "phoneme", "ecoli"]` — all cached in `data/*.parquet`
+All cached in `data/*.parquet`:
+`abalone, blood, breast_cancer, credit-g, ecoli, glass_float, haberman, ilpd, ionosphere, kc1, phoneme, pima, spambase, vehicle_bus, yeast`
 
-## Active Plan
+## Output Files
 
-`plans/260523-1200-noisyn-paper-hardening/` — 6-phase hardening to reach PR/KBS/TNNLS tier:
+| File | Rows | Purpose |
+|------|------|---------|
+| `outputs/COINS-all-results.xlsx` | 49,250 | **All experiments** in one xlsx (9 tabs + README) |
+| `outputs/COINS-all-results.csv` | 49,250 | Same data flat CSV with `experiment` tag column |
+| `outputs/full-benchmark-solution-v2.csv` | 24,750 | Main benchmark — 15 datasets, Table 1 |
+| `outputs/full-benchmark-ir030-solution.csv` | 8,250 | IR=0.30 sensitivity sweep, Table 6 |
+| `outputs/competitor-headtohead-expanded.csv` | 8,100 | External comparison, Table 2 |
+| `outputs/cwms-msbs-deep-sweep.csv` | 4,350 | Deep sweep + oracle reference, Appendix |
+| `outputs/rfet-ablation-sweep.csv` | 1,500 | RF/ET failure-mode ablation |
+| `outputs/scorer-agnosticism-sweep.csv` | 1,250 | Self-family OOF scorer ablation |
+| `outputs/clean-data-ablation.csv` | 400 | Zero-noise ablation |
+| `outputs/failure-mode-sweep.csv` | 400 | Symmetric/reverse-asymmetric noise |
+| `outputs/iw-lamda-sweep.csv` | 250 | IW-SMOTE lambda sensitivity |
 
-| Phase | Focus | Key output |
-|-------|-------|-----------|
-| 1 | Quick fixes (no experiments) | Fix "1,050 pairs", PR-AUC in both evaluators, per-dataset Wilcoxon+Stouffer, binary label assertion |
-| 2 | Fast sweeps on 5 datasets | Failure-mode protocols, RF/ET ablation (cwms vs msbs), IW-SMOTE lamda sensitivity, clean-data ablation |
-| 3 | Dataset expansion to 15 | Download 10 new OpenML datasets, register in loaders.py, re-run benchmark → 24,750 rows |
-| 4 | IR=0.30 sweep | Same benchmark at target_ratio=0.30 → 24,750 rows |
-| 5 | Expanded external comparison | LR+SVM+HGB × 3 protocols × 15 datasets → 8,100 rows |
-| 6 | Paper rewrite | Hardened tables, honest framing, per-dataset p-values |
+Superseded 5-dataset v1 runs archived in `outputs/archive/superseded-results.tar.gz`.
 
 ## Statistical Approach
 
@@ -84,18 +93,9 @@ Zero label modification. OOF confidence scores feed both components — no extra
 
 ## Key Decisions (do not reverse without flagging)
 
-- **Method name**: NoiSyn (accepted by user)
+- **Algorithm name**: COINS (Confidence Out-of-fold Imbalanced Noise Synthesis)
 - **Oracle relabel**: Appendix only — not a Table 1 row. Reference as "upper bound, see Appendix A."
-- **IW-SMOTE lamda**: Currently 30; Phase 2 Sweep C gates Phase 5. Change lamda in `iw_smote()` call only if lamda=100 wins by >0.5pp.
+- **IW-SMOTE lamda**: 30 (gated by iw-lamda-sweep; change only if lamda=100 wins by >0.5pp).
 - **SW-framework**: Keep in Table 2 with dagger footnote if validation shows approximation is adequate; remove to Appendix if clearly weaker.
-- **RF/ET**: Not claimed to benefit from NoiSyn. Discussed honestly in Discussion section with ablation evidence from Phase 2.
+- **RF/ET**: Not claimed to benefit from COINS. Discussed honestly in Discussion with ablation evidence.
 - **calibrated_lr**: Excluded from cwms/msbs methods due to sklearn#21134 sample_weight routing bug. Baseline-only.
-
-## Existing Outputs (do not overwrite)
-
-| File | Rows | Description |
-|------|------|-------------|
-| `outputs/full-benchmark-solution.csv` | 8,250 | Original 5-dataset benchmark |
-| `outputs/competitor-headtohead.csv` | 300 | LR × medium × 5 datasets external comparison |
-| `outputs/cwms-msbs-deep-sweep.csv` | — | Per-model deep sweep (oracle reference) |
-| `outputs/scorer-agnosticism-sweep.csv` | — | Cross-family OOF scorer ablation |

@@ -1,27 +1,49 @@
-# Results Reference — NoiSyn Benchmark
+# Results Reference — COINS Benchmark
 
 Consolidated numbers extracted from output CSVs. All figures machine-verified via script
-on 2026-05-23.
+on 2026-05-23/24.
 
-## Run Metadata
+## Consolidated Output Files
+
+| File | Rows | Description |
+|------|------|-------------|
+| `outputs/COINS-all-results.xlsx` | 49,250 | All experiments in one xlsx (9 tabs + README) |
+| `outputs/COINS-all-results.csv` | 49,250 | Same data, flat CSV with `experiment` tag column |
+| `docs/COINS-literature-review.xlsx` | 25 papers | 2-sheet literature review (Overview + 25-paper table) |
+
+## Individual Experiment Files
+
+| File | Rows | Purpose |
+|------|------|---------|
+| `outputs/full-benchmark-solution-v2.csv` | 24,750 | Main benchmark — 15 datasets, Table 1 source |
+| `outputs/full-benchmark-ir030-solution.csv` | 8,250 | IR=0.30 sensitivity sweep, Table 6 source |
+| `outputs/competitor-headtohead-expanded.csv` | 8,100 | External comparison LR+SVM+HGB × 15ds, Table 2 |
+| `outputs/cwms-msbs-deep-sweep.csv` | 4,350 | Deep sweep + oracle upper bound, Appendix |
+| `outputs/rfet-ablation-sweep.csv` | 1,500 | RF/ET failure-mode ablation, Discussion |
+| `outputs/scorer-agnosticism-sweep.csv` | 1,250 | Self-family vs cross-family OOF scorer ablation |
+| `outputs/clean-data-ablation.csv` | 400 | Zero-noise ablation (no degradation check) |
+| `outputs/failure-mode-sweep.csv` | 400 | Symmetric/reverse-asymmetric noise protocols |
+| `outputs/iw-lamda-sweep.csv` | 250 | IW-SMOTE lambda sensitivity (gates lambda=30) |
+
+Superseded files (3-dataset v1 runs) archived in `outputs/archive/superseded-results.tar.gz`.
+
+## Run Metadata (Main Benchmark — v2)
 
 | Item | Value |
 |------|-------|
-| Primary CSV | `outputs/full-benchmark-solution.csv` |
-| Competitor CSV | `outputs/competitor-headtohead.csv` |
-| Primary rows (non-null BA) | 8,250 |
-| Competitor rows | 300 |
-| Primary columns | 22 |
-| Datasets | credit-g, ecoli, phoneme, pima, yeast (5) |
+| Primary CSV | `outputs/full-benchmark-solution-v2.csv` |
+| Competitor CSV | `outputs/competitor-headtohead-expanded.csv` |
+| Primary rows | 24,750 |
+| Primary columns | 23 (incl. pr_auc) |
+| Datasets | 15 OpenML datasets (abalone, blood, breast_cancer, credit-g, ecoli, glass_float, haberman, ilpd, ionosphere, kc1, phoneme, pima, sonar*, spambase, vehicle_bus, yeast) |
 | Seeds | 13, 17, 23, 29, 31, 37, 41, 43, 47, 53 (10) |
 | Noise protocols | hidden_minority_low, hidden_minority_medium, hidden_minority_high (3) |
 | Noise rates | low: ε_mn=0.10 ε_mj=0.02 · medium: ε_mn=0.25 ε_mj=0.02 · high: ε_mn=0.40 ε_mj=0.02 |
 | Methods in primary | no_cleaning, class_proportional, smote, cwms, cwms_msbs, cwms_msbs_shuffled, msbs |
 | Methods in competitor | no_cleaning, smote, class_proportional, iw_smote, sw_framework, cwms_msbs |
-| Competitor scope | LR only, medium noise only, 50 pairs per method (5 datasets × 10 seeds) |
-| Wilcoxon test | two-sided signed-rank, paired on (dataset, seed, noise_protocol) |
+| Wilcoxon test | per-dataset signed-rank (30 pairs = 10 seeds × 3 protocols) + Stouffer Z across 15 datasets |
 
-Method name mapping: `cwms_msbs` = NoiSyn in paper.
+Method name mapping: `cwms_msbs` = COINS in paper.
 
 ---
 
