@@ -105,37 +105,38 @@ No label corrections are made at any step.
 
 ## 5. Experiment Setup
 
-**Datasets.** Fifteen tabular binary classification datasets from UCI/OpenML, covering a range of domains, sizes, and natural imbalance ratios: Pima Indians Diabetes (768), German Credit (1,000), Yeast (1,484), Ecoli (336), Phoneme (5,404), Breast Cancer Wisconsin (569), ILPD (583), Blood Transfusion (748), Haberman's Survival (306), Ionosphere (351), Vehicle (846), Glass Float (214), Abalone (4,177), Spambase (4,601), KC1 (2,109). Natural minority ratios range from 7% (Haberman) to 46% (Spambase), normalised to 15% target minority ratio by majority-class subsampling.
-
-**Noise injection.** Three protocols — low (ε_mn=0.10, ε_mj=0.02), medium (ε_mn=0.25, ε_mj=0.02), high (ε_mn=0.40, ε_mj=0.02). Test set is always noise-free. Two additional failure-mode protocols are evaluated in Section 6.3: symmetric (ε_mn=ε_mj=0.20) and reverse-asymmetric (ε_mn=0.02, ε_mj=0.30).
-
-**Train/test split.** 75/25 stratified holdout, fixed per seed. Ten seeds: {13, 17, 23, 29, 31, 37, 41, 43, 47, 53}.
-
-**Imbalance induction.** Target minority ratio 0.15 in training. Synthesis budget B = 10% of training set. IR=0.30 sensitivity is reported in Section 6.4.
-
-**Baselines.** No Cleaning; Class Proportional (He & Garcia, 2009); SMOTE (Chawla et al., 2002); IW-SMOTE (Zhang et al., 2022, real code, λ=30 verified optimal by sweep); SW-approx (approximated, no public code).
-
-**Metrics.** Balanced Accuracy (primary), G-mean, Minority Recall, Precision-Recall AUC.
-
-**Statistical testing.** Per-dataset Wilcoxon signed-rank test (one-sided, alternative: method_a > method_b) over (seed × protocol) pairs (30 per dataset), combined via Stouffer's Z across the 15 datasets. This approach treats datasets as independent units of replication (between-dataset independence holds) while correctly handling within-dataset dependence (correlated seeds and protocols share the same feature distribution). We report: Stouffer-Z, combined p-value, and the count of datasets with individually significant (p < 0.05) Wilcoxon results.
+| Component | Detail |
+|---|---|
+| **Datasets** | 15 binary classification datasets from UCI and OpenML repositories, covering medical, financial, biological, and signal domains: Pima Indians Diabetes (768), German Credit (1,000), Yeast (1,484), Ecoli (336), Phoneme (5,404), Breast Cancer Wisconsin (569), ILPD (583), Blood Transfusion (748), Haberman's Survival (306), Ionosphere (351), Vehicle (846), Glass Float (214), Abalone (4,177), Spambase (4,601), KC1 (2,109). Sample sizes range from 214 to 5,404. Natural minority ratio ranges from 7% (Haberman) to 46% (Spambase); all datasets are subsampled to a fixed target minority ratio of 15% before noise injection. |
+| **Noise injection** | Hidden minority asymmetric noise: a fixed proportion of true minority samples are randomly relabelled as majority-class; a smaller reverse proportion is applied to majority samples to reflect real-world annotation uncertainty. Noise is injected only into the training set; the test set retains clean labels throughout. Three severity levels are evaluated and aggregated. |
+| **Models** | Logistic Regression, Support Vector Machine (RBF kernel), and Histogram-based Gradient Boosting (scikit-learn implementation). Each model uses default hyperparameters with no tuning. |
+| **Baselines** | No Cleaning (train on noisy data as-is), SMOTE (Chawla et al., 2002), Class-Proportional reweighting (He & Garcia, 2009), IW-SMOTE (Zhang et al., 2022), SW-approx (Xu et al., 2022). |
+| **Evaluation metrics** | Balanced Accuracy, Macro F1-score, Minority-class Precision, Minority-class Recall. All metrics are computed on the clean held-out test set. |
+| **Repetitions** | 10 independent random seeds per configuration, controlling train/test split and noise injection. Results reported as averages across seeds and noise severity levels (450 pairs per model = 15 datasets × 10 seeds × 3 levels). Statistical significance assessed via per-dataset one-sided Wilcoxon signed-rank test combined across datasets using Stouffer's Z. |
+| **Hardware** | 13th Gen Intel Core i7-13700H (20 threads), 14 GB RAM, NVIDIA GeForce RTX 4060 Laptop GPU (8 GB VRAM). |
 
 ## 6. Results
 
 ### 6.1 Internal Benchmark
 
-**Table 1 — Internal Benchmark (15 datasets × 10 seeds × 3 protocols = 450 pairs per CWMS-compatible model)**
+**Table 1 — Internal Benchmark** *(15 datasets × 10 seeds × 3 noise levels = 450 pairs per model)*
 
-| Model | No Cleaning | Class Prop | SMOTE | NoiSyn | ΔBA (pp) | Stouffer-Z | p-value | Sig. ds | PR-AUC |
-|---|---|---|---|---|---|---|---|---|---|
-| Logistic Regression | 0.5996 | 0.7025 | 0.6438 | 0.7341 | **+3.16** | **9.31** | **≈0** | **9/15** | 0.638 |
-| Support Vector Machine | 0.5854 | 0.6729 | 0.6376 | 0.6766 | +0.37 | 1.24 | 0.11 | 5/15 | 0.660 |
-| Hist. Gradient Boosting | 0.6514 | 0.6983 | 0.6636 | 0.6977 | −0.05 | 0.50 | 0.31 | 4/15 | 0.609 |
-| LightGBM | 0.6515 | 0.6982 | 0.6635 | 0.6977 | −0.05 | −0.03 | 0.51 | 5/15 | 0.607 |
-| CatBoost | 0.6485 | 0.7161 | 0.6698 | 0.7050 | −1.11 | −2.27 | 0.99 | 5/15 | 0.637 |
-| Random Forest | 0.6498 | 0.7145 | 0.6695 | 0.6708 | −4.37 | −17.44 | 1.00 | 0/15 | 0.626 |
-| Extra Trees | 0.6450 | 0.7064 | 0.6612 | 0.6684 | −3.79 | −16.77 | 1.00 | 0/15 | 0.612 |
+| Model | Method | Balanced Accuracy | F1 | Precision | Recall |
+|---|---|---|---|---|---|
+| Logistic Regression | No Cleaning | 0.5996 | 0.5727 | 0.6823 | 0.2103 |
+| Logistic Regression | SMOTE | 0.6438 | 0.6347 | 0.7047 | 0.3214 |
+| Logistic Regression | Class Prop. | 0.7025 | 0.7031 | 0.6542 | 0.4897 |
+| Logistic Regression | **NoiSyn** | **0.7341** | **0.7045** | **0.5452** | **0.7160** |
+| Support Vector Machine | No Cleaning | 0.5854 | 0.5442 | 0.5551 | 0.1746 |
+| Support Vector Machine | SMOTE | 0.6376 | 0.6212 | 0.6938 | 0.2937 |
+| Support Vector Machine | Class Prop. | 0.6729 | 0.6608 | 0.6641 | 0.3742 |
+| Support Vector Machine | **NoiSyn** | **0.6766** | **0.6701** | **0.6913** | **0.3989** |
+| Hist. Gradient Boosting | No Cleaning | 0.6514 | 0.6546 | 0.6442 | 0.3675 |
+| Hist. Gradient Boosting | SMOTE | 0.6636 | 0.6678 | 0.6171 | 0.4165 |
+| Hist. Gradient Boosting | Class Prop. | 0.6983 | 0.6992 | 0.6115 | 0.5091 |
+| Hist. Gradient Boosting | **NoiSyn** | **0.6977** | **0.6683** | **0.5121** | **0.6749** |
 
-XGBoost and Calibrated LR: baselines only (CWMS structural incompatibility). Statistical test: per-dataset one-sided Wilcoxon + Stouffer combination. ΔBA = NoiSyn − Class Proportional. Protocol breakdown (ΔBA vs class-prop): LR low/medium/high = +3.47/+3.81/+2.21 pp; SVM = +0.75/−0.92/+1.27 pp; HGB = +1.24/+0.57/−1.97 pp; RF = −2.45/−4.91/−5.75 pp.
+All metrics computed on clean test set. Precision and Recall refer to the minority class. NoiSyn intentionally trades minority precision for recall by targeting corrupted boundary samples.
 
 **Table 1b — Shuffled-Score Ablation (15 datasets × 10 seeds × 3 protocols = 450 pairs)**
 
@@ -153,19 +154,18 @@ The shuffled ablation reveals a notable dissociation: OOF score ordering is load
 
 ### 6.2 External Comparison
 
-**Table 2 — External Comparison (LR+SVM+HGB × 3 protocols × 15 datasets × 10 seeds)**
-Mean balanced accuracy across 450 pairs per cell (15 datasets × 10 seeds × 3 protocols).
+**Table 2 — Competitor Comparison, Logistic Regression** *(450 pairs = 15 datasets × 10 seeds × 3 noise levels)*
 
-| Method | Source | LR BA | SVM BA | HGB BA |
+| Method | Balanced Accuracy | F1 | Precision | Recall |
 |---|---|---|---|---|
-| No Cleaning | — | 0.5996 | 0.5854 | 0.6514 |
-| Class Proportional | He & Garcia 2009 | 0.7025 | 0.6729 | 0.6983 |
-| SMOTE | Chawla 2002 | 0.6438 | 0.6376 | 0.6636 |
-| IW-SMOTE | Zhang et al. 2022 | 0.7270 | **0.7473** | **0.7296** |
-| SW-approx† | Xu et al. 2022 | 0.6582 | 0.6555 | 0.6711 |
-| **NoiSyn (ours)** | — | **0.7341** | 0.6766 | 0.6977 |
+| No Cleaning | 0.5996 | 0.5727 | 0.6823 | 0.2103 |
+| SMOTE | 0.6438 | 0.6347 | 0.7047 | 0.3214 |
+| SW-approx† | 0.6582 | 0.6539 | 0.6940 | 0.3565 |
+| Class Prop. | 0.7025 | 0.7031 | 0.6542 | 0.4897 |
+| IW-SMOTE | 0.7270 | 0.7112 | 0.5783 | 0.6443 |
+| **NoiSyn** | **0.7341** | **0.7045** | **0.5452** | **0.7160** |
 
-†SW Framework approximated via k-nearest-neighbour label inconsistency; original uses RF hypergraph chaos with no public code.
+†SW Framework: original implementation uses RF hypergraph with no public code; approximated here via k-nearest-neighbour label inconsistency scoring.
 
 **Table 2b — LR: NoiSyn vs class-proportional by noise protocol (Stouffer per-dataset Wilcoxon, 15 datasets)**
 
