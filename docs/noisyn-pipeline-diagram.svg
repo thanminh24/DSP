@@ -1,0 +1,170 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 630" width="1280" height="630">
+<style>text{font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;}</style>
+<defs>
+<marker id="arw-navy" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#0f172a"/></marker>
+<marker id="arw-blue" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#2563eb"/></marker>
+<marker id="arw-amber" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#b45309"/></marker>
+<marker id="arw-teal" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#0d9488"/></marker>
+<marker id="arw-purple" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#7c3aed"/></marker>
+<marker id="arw-green" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#16a34a"/></marker>
+<filter id="sh" x="-5%" y="-5%" width="115%" height="115%"><feDropShadow dx="1" dy="2" stdDeviation="3" flood-color="rgba(0,0,0,0.12)"/></filter>
+</defs>
+<rect width="1280" height="630" fill="#ffffff"/>
+<rect x="0" y="0" width="1280" height="68" fill="#0f172a"/>
+<text x="640" y="28" text-anchor="middle" font-size="16" font-weight="700" fill="#f8fafc">NoiSyn: Noise-Aware Out-of-Fold Synthesis &#8212; Method Pipeline</text>
+<text x="640" y="50" text-anchor="middle" font-size="11" fill="#94a3b8">Zero label modification  &#183;  Self-family OOF scoring  &#183;  Guided minority-side boundary synthesis</text>
+<rect x="18" y="85" width="185" height="345" rx="10" fill="#fff1f2" stroke="#f43f5e" stroke-width="2" filter="url(#sh)"/>
+<rect x="18" y="85" width="185" height="36" rx="10" fill="#e11d48"/>
+<rect x="18" y="111" width="185" height="10" fill="#e11d48"/>
+<text x="110" y="107" text-anchor="middle" font-size="12" font-weight="700" fill="#ffffff">INPUT</text>
+<text x="110" y="141" text-anchor="middle" font-size="15" font-weight="700" fill="#881337">D_train</text>
+<text x="110" y="159" text-anchor="middle" font-size="10.5" font-weight="400" fill="#9f1239">Noisy tabular data</text>
+<text x="110" y="175" text-anchor="middle" font-size="10.5" font-weight="400" fill="#9f1239">Binary classification</text>
+<line x1="26" y1="189" x2="195" y2="189" stroke="#f43f5e" stroke-width="1" opacity="0.35"/>
+<text x="110" y="205" text-anchor="middle" font-size="10" font-weight="600" fill="#9f1239">Hidden minority noise:</text>
+<text x="110" y="223" text-anchor="middle" font-size="14" font-weight="700" fill="#e11d48">ε_mn >> ε_mj</text>
+<line x1="26" y1="239" x2="195" y2="239" stroke="#f43f5e" stroke-width="1" opacity="0.35"/>
+<text x="110" y="255" text-anchor="middle" font-size="10" font-weight="400" fill="#9f1239">Minority samples</text>
+<text x="110" y="269" text-anchor="middle" font-size="10" font-weight="400" fill="#9f1239">mislabeled as majority</text>
+<text x="110" y="283" text-anchor="middle" font-size="10" font-weight="400" fill="#9f1239">at much higher rate</text>
+<line x1="26" y1="297" x2="195" y2="297" stroke="#f43f5e" stroke-width="1" opacity="0.35"/>
+<circle cx="60" cy="313" r="5" fill="#3b82f6" opacity="0.8"/>
+<circle cx="82" cy="319" r="5" fill="#3b82f6" opacity="0.8"/>
+<circle cx="110" cy="311" r="5" fill="#3b82f6" opacity="0.8"/>
+<circle cx="96" cy="335" r="5" fill="#ef4444" opacity="0.8"/>
+<circle cx="132" cy="325" r="5" fill="#ef4444" opacity="0.8"/>
+<circle cx="148" cy="313" r="5" fill="#64748b" opacity="0.8"/>
+<circle cx="70" cy="340" r="5" fill="#64748b" opacity="0.8"/>
+<circle cx="120" cy="343" r="5" fill="#64748b" opacity="0.8"/>
+<circle cx="155" cy="337" r="5" fill="#64748b" opacity="0.8"/>
+<circle cx="90" cy="353" r="5" fill="#64748b" opacity="0.8"/>
+<circle cx="140" cy="350" r="5" fill="#64748b" opacity="0.8"/>
+<text x="110" y="370" text-anchor="middle" font-size="8.5" font-weight="400" fill="#64748b">● Minority   ● Mislabeled maj.   ● Majority</text>
+<line x1="26" y1="382" x2="195" y2="382" stroke="#f43f5e" stroke-width="1" opacity="0.35"/>
+<text x="110" y="401" text-anchor="middle" font-size="9.5" font-weight="600" fill="#9f1239">Train: noisy   Test: clean</text>
+<text x="110" y="417" text-anchor="middle" font-size="9" font-weight="400" fill="#6b7280">15 datasets, IR=0.15</text>
+<rect x="228" y="68" width="205" height="364" rx="10" fill="#eff6ff" stroke="#3b82f6" stroke-width="2" filter="url(#sh)"/>
+<rect x="228" y="68" width="205" height="36" rx="10" fill="#1d4ed8"/>
+<rect x="228" y="94" width="205" height="10" fill="#1d4ed8"/>
+<text x="330" y="90" text-anchor="middle" font-size="11" font-weight="700" fill="#ffffff">OOF CONFIDENCE SCORING</text>
+<text x="330" y="123" text-anchor="middle" font-size="11" font-weight="600" fill="#1e40af">Stratified 5-Fold CV</text>
+<line x1="236" y1="138" x2="425" y2="138" stroke="#3b82f6" stroke-width="1" opacity="0.35"/>
+<text x="330" y="153" text-anchor="middle" font-size="10" font-weight="600" fill="#1e40af">Each fold:</text>
+<text x="330" y="168" text-anchor="middle" font-size="10" font-weight="400" fill="#1e40af">Train F_balanced on fold</text>
+<text x="330" y="183" text-anchor="middle" font-size="10" font-weight="400" fill="#1e40af">training partition</text>
+<text x="330" y="198" text-anchor="middle" font-size="10" font-weight="400" fill="#1e40af">Score held-out majority →</text>
+<text x="330" y="216" text-anchor="middle" font-size="12" font-weight="700" fill="#1d4ed8">s_i = P(minority | x_i)</text>
+<line x1="236" y1="231" x2="425" y2="231" stroke="#3b82f6" stroke-width="1" opacity="0.35"/>
+<text x="330" y="246" text-anchor="middle" font-size="10" font-weight="600" fill="#1e40af">Self-family scoring:</text>
+<text x="330" y="261" text-anchor="middle" font-size="10" font-weight="400" fill="#1e40af">Same model family as F_final</text>
+<text x="330" y="275" text-anchor="middle" font-size="10" font-weight="400" fill="#64748b">→ no confirmation bias</text>
+<line x1="236" y1="289" x2="425" y2="289" stroke="#3b82f6" stroke-width="1" opacity="0.35"/>
+<text x="330" y="304" text-anchor="middle" font-size="10" font-weight="600" fill="#1e40af">Output: suspiciousness scores</text>
+<text x="330" y="322" text-anchor="middle" font-size="14" font-weight="700" fill="#1d4ed8">s_i ∈ [0, 1]</text>
+<text x="330" y="340" text-anchor="middle" font-size="10" font-weight="400" fill="#1e40af">for all majority-labeled samples</text>
+<line x1="236" y1="355" x2="425" y2="355" stroke="#3b82f6" stroke-width="1" opacity="0.35"/>
+<text x="330" y="372" text-anchor="middle" font-size="10" font-weight="400" fill="#64748b">High s_i → likely mislabeled</text>
+<text x="330" y="387" text-anchor="middle" font-size="10" font-weight="400" fill="#64748b">Low s_i → confirmed majority</text>
+<line x1="236" y1="402" x2="425" y2="402" stroke="#3b82f6" stroke-width="1" opacity="0.35"/>
+<text x="330" y="418" text-anchor="middle" font-size="10" font-weight="600" fill="#1d4ed8">Feeds both CWMS and MSBS</text>
+<rect x="458" y="68" width="205" height="168" rx="10" fill="#fffbeb" stroke="#f59e0b" stroke-width="2" filter="url(#sh)"/>
+<rect x="458" y="68" width="205" height="36" rx="10" fill="#d97706"/>
+<rect x="458" y="94" width="205" height="10" fill="#d97706"/>
+<text x="560" y="84" text-anchor="middle" font-size="12" font-weight="700" fill="#ffffff">CWMS</text>
+<text x="560" y="97" text-anchor="middle" font-size="8.5" font-weight="400" fill="rgba(255,255,255,0.9)">Confidence-Weighted Majority Suppression</text>
+<text x="560" y="123" text-anchor="middle" font-size="10" font-weight="600" fill="#92400e">Linear models (LR, SVM):</text>
+<text x="560" y="138" text-anchor="middle" font-size="11" font-weight="600" fill="#78350f">w_i = 1 − s_i  (majority)</text>
+<text x="560" y="153" text-anchor="middle" font-size="11" font-weight="400" fill="#78350f">w_i = 1.0      (minority)</text>
+<line x1="466" y1="165" x2="655" y2="165" stroke="#f59e0b" stroke-width="1" opacity="0.35"/>
+<text x="560" y="180" text-anchor="middle" font-size="10" font-weight="600" fill="#92400e">Gradient boosting: normalized</text>
+<text x="560" y="194" text-anchor="middle" font-size="10" font-weight="400" fill="#92400e">by imbalance ratio spw</text>
+<line x1="466" y1="206" x2="655" y2="206" stroke="#f59e0b" stroke-width="1" opacity="0.35"/>
+<text x="560" y="221" text-anchor="middle" font-size="9.5" font-weight="400" fill="#92400e">Down-weights suspicious majority</text>
+<rect x="458" y="260" width="205" height="168" rx="10" fill="#f0fdfa" stroke="#14b8a6" stroke-width="2" filter="url(#sh)"/>
+<rect x="458" y="260" width="205" height="36" rx="10" fill="#0d9488"/>
+<rect x="458" y="286" width="205" height="10" fill="#0d9488"/>
+<text x="560" y="276" text-anchor="middle" font-size="12" font-weight="700" fill="#ffffff">MSBS</text>
+<text x="560" y="289" text-anchor="middle" font-size="9" font-weight="400" fill="rgba(255,255,255,0.9)">Minority-Side Boundary Synthesis</text>
+<text x="560" y="315" text-anchor="middle" font-size="11" font-weight="600" fill="#115e59">Seed selection ∝ s_i</text>
+<text x="560" y="332" text-anchor="middle" font-size="10" font-weight="600" fill="#115e59">x_synth = x_min + λ(x_seed − x_min)</text>
+<text x="560" y="347" text-anchor="middle" font-size="10" font-weight="400" fill="#0d9488">λ ∼ Uniform(0, 1)</text>
+<line x1="466" y1="359" x2="655" y2="359" stroke="#14b8a6" stroke-width="1" opacity="0.35"/>
+<text x="560" y="374" text-anchor="middle" font-size="10" font-weight="600" fill="#115e59">Budget B = 10% × |D_train|</text>
+<text x="560" y="389" text-anchor="middle" font-size="9.5" font-weight="400" fill="#115e59">All synthetic → minority label</text>
+<line x1="466" y1="401" x2="655" y2="401" stroke="#14b8a6" stroke-width="1" opacity="0.35"/>
+<text x="560" y="417" text-anchor="middle" font-size="9.5" font-weight="400" fill="#0d9488">Fills corrupted boundary region</text>
+<rect x="688" y="68" width="218" height="364" rx="10" fill="#faf5ff" stroke="#8b5cf6" stroke-width="2" filter="url(#sh)"/>
+<rect x="688" y="68" width="218" height="36" rx="10" fill="#6d28d9"/>
+<rect x="688" y="94" width="218" height="10" fill="#6d28d9"/>
+<text x="797" y="90" text-anchor="middle" font-size="11" font-weight="700" fill="#ffffff">AUGMENTED TRAINING</text>
+<text x="797" y="123" text-anchor="middle" font-size="10.5" font-weight="600" fill="#4c1d95">Augmented dataset:</text>
+<text x="797" y="138" text-anchor="middle" font-size="10.5" font-weight="400" fill="#4c1d95">(X_aug, y_aug)</text>
+<text x="797" y="153" text-anchor="middle" font-size="10" font-weight="600" fill="#4c1d95">= (X_tr ∪ X_synth, ỹ ∪ {m}^B)</text>
+<line x1="696" y1="167" x2="898" y2="167" stroke="#8b5cf6" stroke-width="1" opacity="0.35"/>
+<text x="797" y="182" text-anchor="middle" font-size="10" font-weight="400" fill="#4c1d95">Train F_final on (X_aug, y_aug)</text>
+<text x="797" y="197" text-anchor="middle" font-size="10" font-weight="400" fill="#4c1d95">with sample weights w from CWMS</text>
+<rect x="702" y="213" width="190" height="28" rx="5" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>
+<text x="797" y="231" text-anchor="middle" font-size="10.5" font-weight="700" fill="#14532d">&#10003; Zero Label Modification</text>
+<line x1="696" y1="251" x2="898" y2="251" stroke="#8b5cf6" stroke-width="1" opacity="0.35"/>
+<text x="797" y="266" text-anchor="middle" font-size="10" font-weight="600" fill="#4c1d95">CWMS contribution:</text>
+<text x="797" y="281" text-anchor="middle" font-size="10" font-weight="400" fill="#4c1d95">Weights suppress suspicious</text>
+<text x="797" y="296" text-anchor="middle" font-size="10" font-weight="400" fill="#4c1d95">majority-labeled samples</text>
+<line x1="696" y1="310" x2="898" y2="310" stroke="#8b5cf6" stroke-width="1" opacity="0.35"/>
+<text x="797" y="325" text-anchor="middle" font-size="10" font-weight="600" fill="#4c1d95">MSBS contribution:</text>
+<text x="797" y="340" text-anchor="middle" font-size="10" font-weight="400" fill="#4c1d95">Synthetic minority points</text>
+<text x="797" y="355" text-anchor="middle" font-size="10" font-weight="400" fill="#4c1d95">target boundary region</text>
+<line x1="696" y1="369" x2="898" y2="369" stroke="#8b5cf6" stroke-width="1" opacity="0.35"/>
+<text x="797" y="384" text-anchor="middle" font-size="10" font-weight="600" fill="#4c1d95">Self-family F: OOF scorer and</text>
+<text x="797" y="399" text-anchor="middle" font-size="10" font-weight="400" fill="#4c1d95">final model use same family</text>
+<text x="797" y="414" text-anchor="middle" font-size="9.5" font-weight="400" fill="#64748b">→ calibrated boundary signal</text>
+<rect x="934" y="148" width="172" height="208" rx="10" fill="#f0fdf4" stroke="#22c55e" stroke-width="2" filter="url(#sh)"/>
+<rect x="934" y="148" width="172" height="36" rx="10" fill="#15803d"/>
+<rect x="934" y="174" width="172" height="10" fill="#15803d"/>
+<text x="1020" y="170" text-anchor="middle" font-size="12" font-weight="700" fill="#ffffff">OUTPUT</text>
+<text x="1020" y="202" text-anchor="middle" font-size="17" font-weight="700" fill="#14532d">F_final</text>
+<text x="1020" y="221" text-anchor="middle" font-size="10.5" font-weight="400" fill="#14532d">Trained classifier</text>
+<line x1="942" y1="236" x2="1098" y2="236" stroke="#22c55e" stroke-width="1" opacity="0.35"/>
+<text x="1020" y="251" text-anchor="middle" font-size="10" font-weight="400" fill="#166534">Boundary-corrected,</text>
+<text x="1020" y="265" text-anchor="middle" font-size="10" font-weight="400" fill="#166534">minority-aware model</text>
+<line x1="942" y1="279" x2="1098" y2="279" stroke="#22c55e" stroke-width="1" opacity="0.35"/>
+<text x="1020" y="294" text-anchor="middle" font-size="10.5" font-weight="700" fill="#14532d">LR results:</text>
+<text x="1020" y="309" text-anchor="middle" font-size="10" font-weight="400" fill="#14532d">+3.16 pp Balanced Accuracy</text>
+<text x="1020" y="324" text-anchor="middle" font-size="10" font-weight="400" fill="#14532d">Stouffer Z = 9.31, p ≈ 0</text>
+<text x="1020" y="339" text-anchor="middle" font-size="10" font-weight="400" fill="#14532d">9/15 datasets significant</text>
+<line x1="942" y1="352" x2="1098" y2="352" stroke="#22c55e" stroke-width="1" opacity="0.35"/>
+<path d="M 203,257 L 226,257" stroke="#0f172a" stroke-width="2.5" fill="none" marker-end="url(#arw-navy)"/>
+<circle cx="433" cy="250" r="7" fill="#1d4ed8"/>
+<circle cx="433" cy="250" r="3.5" fill="white"/>
+<text x="433" y="254" text-anchor="middle" font-size="8" fill="white" font-weight="700">s</text>
+<path d="M 433,250 L 433,152 L 456,152" stroke="#b45309" stroke-width="2" fill="none" marker-end="url(#arw-amber)"/>
+<path d="M 433,250 L 433,344 L 456,344" stroke="#0d9488" stroke-width="2" fill="none" marker-end="url(#arw-teal)"/>
+<path d="M 663,152 L 672,152 L 672,210 L 686,210" stroke="#b45309" stroke-width="2" fill="none" marker-end="url(#arw-amber)"/>
+<path d="M 663,344 L 672,344 L 672,295 L 686,295" stroke="#0d9488" stroke-width="2" fill="none" marker-end="url(#arw-teal)"/>
+<path d="M 906,250 L 932,252" stroke="#6d28d9" stroke-width="2.5" fill="none" marker-end="url(#arw-purple)"/>
+<rect x="399" y="127" width="68" height="15" rx="3" fill="white" opacity="0.92"/>
+<text x="433" y="138" text-anchor="middle" font-size="9" font-weight="600" fill="#b45309">s_i → CWMS</text>
+<rect x="399" y="352" width="68" height="15" rx="3" fill="white" opacity="0.92"/>
+<text x="433" y="363" text-anchor="middle" font-size="9" font-weight="600" fill="#0d9488">s_i → MSBS</text>
+<rect x="870" y="227" width="98" height="15" rx="3" fill="white" opacity="0.92"/>
+<text x="919" y="238" text-anchor="middle" font-size="9" font-weight="600" fill="#6d28d9">F_final trained</text>
+<rect x="18" y="460" width="1244" height="150" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.5"/>
+<text x="640" y="478" text-anchor="middle" font-size="12" font-weight="700" fill="#1e3a5f">Key Properties &amp; Scope of Claims</text>
+<line x1="18" y1="488" x2="1262" y2="488" stroke="#e2e8f0" stroke-width="1"/>
+<text x="45" y="506" text-anchor="start" font-size="11" font-weight="700" fill="#1e3a5f">Self-Family OOF Scoring</text>
+<text x="45" y="522" text-anchor="start" font-size="9.5" font-weight="400" fill="#374151">&#183; Same model family F for OOF scorer and F_final</text>
+<text x="45" y="539" text-anchor="start" font-size="9.5" font-weight="400" fill="#374151">&#183; Prevents cross-family misspecification</text>
+<text x="45" y="556" text-anchor="start" font-size="9.5" font-weight="400" fill="#374151">&#183; 5-fold OOF: no data leakage, no confirmation bias</text>
+<text x="45" y="573" text-anchor="start" font-size="9.5" font-weight="400" fill="#374151">&#183; OOF scores are load-bearing (shuffled ablation: Z &gt; 2.9)</text>
+<text x="475" y="506" text-anchor="start" font-size="11" font-weight="700" fill="#1e3a5f">Model-Family Operating Conditions</text>
+<text x="475" y="522" text-anchor="start" font-size="9.5" font-weight="400" fill="#16a34a">&#10003; LR: +3.16 pp BA, Z=9.31, p≈0 (9/15 datasets)</text>
+<text x="475" y="539" text-anchor="start" font-size="9.5" font-weight="400" fill="#d97706">△ SVM: +0.37 pp, Z=1.24, p=0.11 (not significant at 15 ds)</text>
+<text x="475" y="556" text-anchor="start" font-size="9.5" font-weight="400" fill="#64748b">○ HGB/LGB: neutral (−0.05 pp); noise-level dependent</text>
+<text x="475" y="573" text-anchor="start" font-size="9.5" font-weight="400" fill="#dc2626">✗ RF/ET: harmful (−4.37/−3.79 pp); CWMS primary cause</text>
+<text x="475" y="590" text-anchor="start" font-size="9.5" font-weight="400" fill="#dc2626">✗ Reverse-asymmetric noise: −10.21 pp (wrong direction)</text>
+<text x="910" y="506" text-anchor="start" font-size="11" font-weight="700" fill="#1e3a5f">Evaluation Protocol</text>
+<text x="910" y="522" text-anchor="start" font-size="9.5" font-weight="400" fill="#374151">&#183; 15 UCI/OpenML datasets (214–5,404 samples)</text>
+<text x="910" y="539" text-anchor="start" font-size="9.5" font-weight="400" fill="#374151">&#183; 3 asymmetric noise protocols: low / medium / high</text>
+<text x="910" y="556" text-anchor="start" font-size="9.5" font-weight="400" fill="#374151">&#183; 10 random seeds per config; IR=0.15 primary</text>
+<text x="910" y="573" text-anchor="start" font-size="9.5" font-weight="400" fill="#374151">&#183; Per-dataset Wilcoxon + Stouffer Z for significance</text>
+<text x="910" y="590" text-anchor="start" font-size="9.5" font-weight="400" fill="#374151">&#183; Claim: LR under confirmed asymmetric hidden-minority noise</text>
+</svg>
