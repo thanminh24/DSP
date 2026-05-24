@@ -7,25 +7,25 @@ on 2026-05-23/24.
 
 | File | Rows | Description |
 |------|------|-------------|
-| `outputs/COINS-all-results.xlsx` | 49,250 | All experiments in one xlsx (9 tabs + README) |
-| `outputs/COINS-all-results.csv` | 49,250 | Same data, flat CSV with `experiment` tag column |
-| `docs/COINS-literature-review.xlsx` | 25 papers | 2-sheet literature review (Overview + 25-paper table) |
+| `docs/experiments/COINS-all-results.xlsx` | 49,250 | All experiments in one xlsx (9 tabs + README) |
+| `docs/experiments/COINS-all-results.csv` | 49,250 | Same data, flat CSV with `experiment` tag column |
+| `docs/research/COINS-literature-review.xlsx` | 25 papers | 2-sheet literature review (Overview + 25-paper table) |
 
 ## Individual Experiment Files
 
 | File | Rows | Purpose |
 |------|------|---------|
-| `outputs/full-benchmark-solution-v2.csv` | 24,750 | Main benchmark — 15 datasets, Table 1 source |
-| `outputs/full-benchmark-ir030-solution.csv` | 8,250 | IR=0.30 sensitivity sweep, Table 6 source |
-| `outputs/competitor-headtohead-expanded.csv` | 8,100 | External comparison LR+SVM+HGB × 15ds, Table 2 |
-| `outputs/cwms-msbs-deep-sweep.csv` | 4,350 | Deep sweep + oracle upper bound, Appendix |
-| `outputs/rfet-ablation-sweep.csv` | 1,500 | RF/ET failure-mode ablation, Discussion |
-| `outputs/scorer-agnosticism-sweep.csv` | 1,250 | Self-family vs cross-family OOF scorer ablation |
-| `outputs/clean-data-ablation.csv` | 400 | Zero-noise ablation (no degradation check) |
-| `outputs/failure-mode-sweep.csv` | 400 | Symmetric/reverse-asymmetric noise protocols |
-| `outputs/iw-lamda-sweep.csv` | 250 | IW-SMOTE lambda sensitivity (gates lambda=30) |
+| `docs/experiments/raw/full-benchmark-solution-v2.csv` | 24,750 | Main benchmark — 15 datasets, Table 1 source |
+| `docs/experiments/raw/full-benchmark-ir030-solution.csv` | 8,250 | IR=0.30 sensitivity sweep, Table 6 source |
+| `docs/experiments/raw/competitor-headtohead-expanded.csv` | 8,100 | External comparison LR+SVM+HGB × 15ds, Table 2 |
+| `docs/experiments/raw/cwms-msbs-deep-sweep.csv` | 4,350 | Deep sweep + oracle upper bound, Appendix |
+| `docs/experiments/raw/rfet-ablation-sweep.csv` | 1,500 | RF/ET failure-mode ablation, Discussion |
+| `docs/experiments/raw/scorer-agnosticism-sweep.csv` | 1,250 | Self-family vs cross-family OOF scorer ablation |
+| `docs/experiments/raw/clean-data-ablation.csv` | 400 | Zero-noise ablation (no degradation check) |
+| `docs/experiments/raw/failure-mode-sweep.csv` | 400 | Symmetric/reverse-asymmetric noise protocols |
+| `docs/experiments/raw/iw-lamda-sweep.csv` | 250 | IW-SMOTE lambda sensitivity (gates lambda=30) |
 
-Superseded files (3-dataset v1 runs) archived in `outputs/archive/superseded-results.tar.gz`.
+Superseded files (3-dataset v1 runs) archived in `docs/experiments/raw/archive/superseded-results.tar.gz`.
 
 ## Run Metadata (Main Benchmark — v2)
 

@@ -1,4 +1,4 @@
-# NoiSyn: Noise-Aware Out-of-Fold Synthesis for Imbalanced Classification under Hidden Minority-Class Label Corruption
+# COINS: Out-of-Fold Confidence Scoring for Noise-Robust Synthesis in Imbalanced Classification
 
 > **Confidence-weighted majority suppression + minority-side boundary synthesis — zero label modification.**
 
@@ -8,7 +8,7 @@
 
 - Hidden minority-class label noise (minority samples mislabeled as majority, ε_mn >> ε_mj) systematically erodes the decision boundary in imbalanced classification.
 - Standard oversampling methods (SMOTE, IW-SMOTE) amplify this corruption by synthesizing from a contaminated minority pool.
-- **NoiSyn** combines out-of-fold (OOF) confidence scoring with two complementary mechanisms — Confidence-Weighted Majority Suppression (CWMS) and Minority-Side Boundary Synthesis (MSBS) — without modifying any labels.
+- **COINS** combines out-of-fold (OOF) confidence scoring with two complementary mechanisms — Confidence-Weighted Majority Suppression (CWMS) and Minority-Side Boundary Synthesis (MSBS) — without modifying any labels.
 - The OOF scorer uses the **same model family** as the final predictor, trained via stratified 5-fold CV, preventing confirmation bias.
 - Across 15 UCI/OpenML tabular datasets, 3 model families (LR, SVM, HGB), 3 asymmetric noise protocols, and 10 seeds:
   - **Logistic Regression**: +3.16 pp balanced accuracy vs class-proportional reweighting (Stouffer Z = 9.31, p ≈ 0, 9/15 datasets significant)
@@ -34,7 +34,7 @@ Existing noise-robust oversampling methods (IW-SMOTE, SW Framework, CRN-SMOTE) e
 
 ### Contributions
 
-1. **NoiSyn pipeline**: combines confidence-weighted training (suppression) and guided minority-side synthesis without any label modification.
+1. **COINS pipeline**: combines confidence-weighted training (suppression) and guided minority-side synthesis without any label modification.
 2. **Self-family OOF scoring**: the confidence scorer is a balanced instance of the same model family as the final predictor, calibrated to the same inductive bias, evaluated out-of-fold to prevent data leakage.
 3. **Model-family characterization**: first systematic account of which classifier families benefit from confidence-weighted noise correction and why — significant/consistent for LR; neutral-to-negative for gradient boosting; actively harmful for bootstrap ensembles (RF/ET).
 4. **Controlled benchmark**: first direct comparison of hidden-minority asymmetric noise methods on a standardized 15-dataset benchmark, with operating-condition characterization, component ablation, and imbalance-ratio sensitivity.
@@ -43,7 +43,7 @@ Existing noise-robust oversampling methods (IW-SMOTE, SW Framework, CRN-SMOTE) e
 
 ## 2. Method
 
-![NoiSyn Pipeline](docs/noisyn-pipeline-diagram.png)
+![COINS Pipeline](docs/paper/noisyn-pipeline-diagram.png)
 
 ### 2.1 Problem Setting
 
@@ -130,21 +130,21 @@ Output: trained F_final
 | Logistic Regression | No Cleaning | 0.5996 | 0.5727 | 0.6823 | 0.2103 |
 | Logistic Regression | SMOTE | 0.6438 | 0.6347 | 0.7047 | 0.3214 |
 | Logistic Regression | Class Prop. | 0.7025 | 0.7031 | 0.6542 | 0.4897 |
-| Logistic Regression | **NoiSyn** | **0.7341** | **0.7045** | **0.5452** | **0.7160** |
+| Logistic Regression | **COINS** | **0.7341** | **0.7045** | **0.5452** | **0.7160** |
 | Support Vector Machine | No Cleaning | 0.5854 | 0.5442 | 0.5551 | 0.1746 |
 | Support Vector Machine | SMOTE | 0.6376 | 0.6212 | 0.6938 | 0.2937 |
 | Support Vector Machine | Class Prop. | 0.6729 | 0.6608 | 0.6641 | 0.3742 |
-| Support Vector Machine | **NoiSyn** | **0.6766** | **0.6701** | **0.6913** | **0.3989** |
+| Support Vector Machine | **COINS** | **0.6766** | **0.6701** | **0.6913** | **0.3989** |
 | Hist. Gradient Boosting | No Cleaning | 0.6514 | 0.6546 | 0.6442 | 0.3675 |
 | Hist. Gradient Boosting | SMOTE | 0.6636 | 0.6678 | 0.6171 | 0.4165 |
 | Hist. Gradient Boosting | Class Prop. | 0.6983 | 0.6992 | 0.6115 | 0.5091 |
-| Hist. Gradient Boosting | **NoiSyn** | **0.6977** | **0.6683** | **0.5121** | **0.6749** |
+| Hist. Gradient Boosting | **COINS** | **0.6977** | **0.6683** | **0.5121** | **0.6749** |
 
-*Precision and Recall refer to the minority class. NoiSyn intentionally trades minority precision for recall by targeting corrupted boundary samples.*
+*Precision and Recall refer to the minority class. COINS intentionally trades minority precision for recall by targeting corrupted boundary samples.*
 
 ### LR by Noise Protocol (Stouffer per-dataset Wilcoxon, 15 datasets)
 
-| Protocol | Class Prop. BA | NoiSyn BA | Δ (pp) | Stouffer Z | p | Sig. datasets |
+| Protocol | Class Prop. BA | COINS BA | Δ (pp) | Stouffer Z | p | Sig. datasets |
 |----------|:-:|:-:|:-:|:-:|:-:|:-:|
 | hidden_minority_low | 0.7247 | 0.7594 | +3.47 | 7.22 | 2.7×10⁻¹³ | 10/15 |
 | hidden_minority_medium | 0.7017 | 0.7398 | +3.81 | 6.28 | 1.7×10⁻¹⁰ | 10/15 |
@@ -160,11 +160,11 @@ Output: trained F_final
 | SW-approx† | 0.6582 | 0.6539 | 0.6940 | 0.3565 |
 | Class Prop. | 0.7025 | 0.7031 | 0.6542 | 0.4897 |
 | IW-SMOTE | 0.7270 | 0.7112 | 0.5783 | 0.6443 |
-| **NoiSyn** | **0.7341** | **0.7045** | **0.5452** | **0.7160** |
+| **COINS** | **0.7341** | **0.7045** | **0.5452** | **0.7160** |
 
 †SW Framework: no public code; approximated via k-NN label inconsistency scoring.
 
-### NoiSyn vs each competitor — LR, all protocols (Stouffer Z)
+### COINS vs each competitor — LR, all protocols (Stouffer Z)
 
 | Competitor | Δ BA (pp) | Stouffer Z | p | Sig. datasets |
 |------------|:-:|:-:|:-:|:-:|
@@ -176,7 +176,7 @@ Output: trained F_final
 
 ### Key Ablation: Shuffled-Score Ablation (OOF ordering load-bearing?)
 
-| Model | NoiSyn BA | Shuffled BA | ΔBA (pp) | Stouffer Z | p |
+| Model | COINS BA | Shuffled BA | ΔBA (pp) | Stouffer Z | p |
 |-------|:-:|:-:|:-:|:-:|:-:|
 | Logistic Regression | 0.7341 | 0.7168 | +1.73 | 7.76 | 4.2×10⁻¹⁵ |
 | SVM | 0.6766 | 0.6683 | +0.83 | 8.99 | ≈0 |
@@ -191,20 +191,54 @@ OOF score ordering is load-bearing for all CWMS-compatible families (Z > 2.9). R
 
 ### Conclusion
 
-NoiSyn achieves statistically significant and consistent gains for logistic regression under confirmed asymmetric hidden-minority label noise (+3.16 pp balanced accuracy, Stouffer Z = 9.31, p ≈ 0, 9/15 datasets; +22 pp minority recall under medium noise). The method operates without any label modification, reusing OOF confidence scores already required for boundary detection at no extra training cost.
+COINS achieves statistically significant and consistent gains for logistic regression under confirmed asymmetric hidden-minority label noise (+3.16 pp balanced accuracy, Stouffer Z = 9.31, p ≈ 0, 9/15 datasets; +22 pp minority recall under medium noise). The method operates without any label modification, reusing OOF confidence scores already required for boundary detection at no extra training cost.
 
-Component ablation on RF/ET identifies CWMS as the primary harm source for bootstrap ensembles (RF: −7.95 pp from CWMS alone), with MSBS causing secondary but smaller harm. The failure mode under reverse-asymmetric noise is severe (−10.21 pp for LR) — users must verify noise direction before applying NoiSyn. Under symmetric noise, the method degrades only slightly (−1.21 pp), as OOF scores are noisy but centred.
+Component ablation on RF/ET identifies CWMS as the primary harm source for bootstrap ensembles (RF: −7.95 pp from CWMS alone), with MSBS causing secondary but smaller harm. The failure mode under reverse-asymmetric noise is severe (−10.21 pp for LR) — users must verify noise direction before applying COINS. Under symmetric noise, the method degrades only slightly (−1.21 pp), as OOF scores are noisy but centred.
 
-**Recommendation**: Apply NoiSyn specifically to logistic regression (and linear SVMs) under confirmed asymmetric hidden-minority label noise, where consistent and statistically significant gains are reproducible across diverse datasets and noise levels. Do not apply to bootstrap ensemble models or under reverse-asymmetric noise.
+**Recommendation**: Apply COINS specifically to logistic regression (and linear SVMs) under confirmed asymmetric hidden-minority label noise, where consistent and statistically significant gains are reproducible across diverse datasets and noise levels. Do not apply to bootstrap ensemble models or under reverse-asymmetric noise.
 
 ### Future Work
 
-- **Multi-class extension**: NoiSyn is designed for binary classification; extending CWMS to softmax-output multi-class models requires per-class OOF confidence reformulation.
+- **Multi-class extension**: COINS is designed for binary classification; extending CWMS to softmax-output multi-class models requires per-class OOF confidence reformulation.
 - **High-dimensional data**: Evaluation is restricted to tabular datasets (up to 5,404 samples). Behavior on high-dimensional or image-derived features is unexplored.
 - **Extreme imbalance ratios**: Primary evaluation at IR=0.15; sensitivity at IR=0.30. Regime IR < 0.05 is unexplored.
 - **Natural label noise**: All experiments inject synthetic noise; evaluation on datasets with known natural annotation uncertainty would strengthen real-world claims.
 - **Adaptive budget**: Fixed B = 10% of training data is not tuned per dataset; an adaptive budget based on estimated noise level could improve performance at high noise.
-- **SVM-NoiSyn characterization**: SVM benefit depends on imbalance ratio (not significant at IR=0.15 but +4.05 pp at IR=0.30). A theoretical analysis of why CWMS interacts with SVM margin differently at different IRs is open.
+- **SVM-COINS characterization**: SVM benefit depends on imbalance ratio (not significant at IR=0.15 but +4.05 pp at IR=0.30). A theoretical analysis of why CWMS interacts with SVM margin differently at different IRs is open.
+
+---
+
+## Repository Layout
+
+```
+DSP/
+├── README.md                        ← this file
+├── CLAUDE.md                        ← project context for AI assistant
+├── requirements.txt
+│
+├── data/                            ← 15 cached .parquet datasets
+│
+├── pipeline/                        ← all source code
+│   ├── augmentation/                ← CWMS + MSBS implementation
+│   ├── baselines/                   ← IW-SMOTE, SW-framework baselines
+│   ├── data/                        ← dataset loaders
+│   ├── evaluation/                  ← metrics and evaluators
+│   ├── models/                      ← model factories
+│   ├── scoring/                     ← OOF confidence scoring
+│   └── experiments/                 ← run scripts and analysis scripts
+│
+└── docs/                            ← all documentation and results
+    ├── README.md                    ← docs index
+    ├── paper/                       ← paper draft, outline, diagrams
+    ├── research/                    ← literature review, novelty analysis
+    ├── pipeline/                    ← codebase summary, reproducibility guide
+    └── experiments/                 ← all results
+        ├── COINS-all-results.xlsx   ← all experiments (9 tabs + README)
+        ├── COINS-all-results.csv    ← same data, flat CSV
+        ├── results-reference.md     ← key numbers consolidated
+        ├── reports/                 ← analysis reports and formatted tables
+        └── raw/                     ← individual experiment CSVs
+```
 
 ---
 
@@ -224,31 +258,26 @@ conda activate dsp
 conda activate dsp
 
 # Step 1: Download all 15 datasets
-python scripts/download_datasets.py
+python pipeline/experiments/download_datasets.py
 
-# Step 2: Run full benchmark (24,750 rows: 7 CWMS models × 7 methods + 2 baseline models × 3 methods)
-python scripts/run_full_benchmark_solution.py
+# Step 2: Run full benchmark (24,750 rows)
+python pipeline/experiments/run_full_benchmark_solution.py
 
-# Step 3: Analyze Table 1 (internal benchmark, per-dataset Wilcoxon + Stouffer Z)
-python scripts/analyze_full_benchmark.py
+# Step 3: Analyze Table 1 (per-dataset Wilcoxon + Stouffer Z)
+python pipeline/experiments/analyze_full_benchmark.py
 ```
 
 ### External Comparison (Table 2)
 
 ```bash
-python scripts/run_competitor_headtohead.py
-python scripts/analyze_competitor_headtohead.py
+python pipeline/experiments/run_expanded_competitor_headtohead.py
+python pipeline/experiments/analyze_expanded_competitor_headtohead.py
 ```
 
-### Outputs
+### Results
 
-| File | Rows | Description |
-|------|------|-------------|
-| `outputs/full-benchmark-solution-v2.csv` | 24,750 | Full 15-dataset benchmark |
-| `outputs/competitor-headtohead-expanded.csv` | ~8,100 | LR+SVM+HGB × 15 datasets external comparison |
-| `outputs/failure-mode-sweep.csv` | — | Symmetric/reverse-asymmetric noise protocols |
-| `outputs/rfet-ablation-sweep.csv` | — | RF/ET component ablation |
-| `outputs/iw-lamda-sweep.csv` | — | IW-SMOTE λ sensitivity (10, 20, 30, 50, 100) |
+All results consolidated in `docs/experiments/COINS-all-results.xlsx` (49,250 rows, 9 experiment tabs).
+Individual CSVs in `docs/experiments/raw/`. See [docs/experiments/README.md](docs/experiments/README.md) for the full index.
 
 ---
 
@@ -256,10 +285,11 @@ python scripts/analyze_competitor_headtohead.py
 
 | File | Content |
 |------|---------|
-| `docs/paper-draft.md` | Full 8-section paper draft with all tables |
-| `docs/results-reference.md` | All key numbers consolidated |
-| `docs/reproducibility-guide.md` | Step-by-step reproduction with expected runtimes |
-| `docs/codebase-summary.md` | Codebase overview and key file index |
+| [docs/paper/paper-draft.md](docs/paper/paper-draft.md) | Full 8-section paper draft with all tables |
+| [docs/experiments/results-reference.md](docs/experiments/results-reference.md) | All key numbers consolidated |
+| [docs/pipeline/reproducibility-guide.md](docs/pipeline/reproducibility-guide.md) | Step-by-step reproduction with expected runtimes |
+| [docs/pipeline/codebase-summary.md](docs/pipeline/codebase-summary.md) | Codebase overview and key file index |
+| [docs/research/COINS-literature-review.xlsx](docs/research/COINS-literature-review.xlsx) | 25-paper literature review |
 
 ---
 
@@ -284,8 +314,8 @@ MIT License — see [LICENSE](LICENSE) for details.
 If you use this work, please cite:
 
 ```bibtex
-@misc{noisyn2025,
-  title   = {NoiSyn: Noise-Aware Out-of-Fold Synthesis for Hidden Minority-Class Label Corruption},
+@misc{coins2025,
+  title   = {COINS: Out-of-Fold Confidence Scoring for Noise-Robust Synthesis in Imbalanced Classification},
   author  = {Than Minh},
   year    = {2025},
   note    = {Preprint}

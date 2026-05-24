@@ -93,7 +93,7 @@ METHODS = [
     "cgms_t05",
     "cgms_t07",
 ]
-out_csv_TEMPLATE = str(PROJECT_ROOT / "outputs/relabeling-viability-{models}.csv")
+out_csv_TEMPLATE = str(PROJECT_ROOT / "docs/experiments/raw/relabeling-viability-{models}.csv")
 
 
 def _combo_key(dataset, model_name, seed, noise_name, budget, ratio):

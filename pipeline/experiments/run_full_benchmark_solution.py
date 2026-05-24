@@ -1,9 +1,9 @@
 """Full benchmark: all models x our solution methods x 3 protocols x CUDA.
 
 Run with:
-  python scripts/run_full_benchmark_solution.py --gpu
-  python scripts/run_full_benchmark_solution.py --gpu --ratio 0.30 --output outputs/full-benchmark-ir030-solution.csv
-  python scripts/run_full_benchmark_solution.py --gpu --datasets pima credit-g yeast phoneme ecoli
+  python pipeline/experiments/run_full_benchmark_solution.py --gpu
+  python pipeline/experiments/run_full_benchmark_solution.py --gpu --ratio 0.30 --output docs/experiments/raw/full-benchmark-ir030-solution.csv
+  python pipeline/experiments/run_full_benchmark_solution.py --gpu --datasets pima credit-g yeast phoneme ecoli
 """
 from __future__ import annotations
 import os
@@ -55,10 +55,9 @@ def main():
     if args.output:
         output_csv = Path(args.output)
     else:
-        output_csv = PROJECT_ROOT / "outputs" / f"full-benchmark-ir{int(ratio*100):03d}-solution.csv"
-        # Keep original name for default ratio=0.15 run
+        output_csv = PROJECT_ROOT / "docs" / "experiments" / "raw" / f"full-benchmark-ir{int(ratio*100):03d}-solution.csv"
         if ratio == 0.15:
-            output_csv = PROJECT_ROOT / "outputs" / "full-benchmark-solution.csv"
+            output_csv = PROJECT_ROOT / "docs" / "experiments" / "raw" / "full-benchmark-solution.csv"
 
     datasets = args.datasets if args.datasets else ALL_15_DATASETS
 

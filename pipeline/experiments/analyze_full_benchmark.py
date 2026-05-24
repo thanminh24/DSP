@@ -8,7 +8,7 @@ import pandas as pd
 from scipy import stats
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_CSV = PROJECT_ROOT / "outputs" / "full-benchmark-solution.csv"
+DEFAULT_CSV = PROJECT_ROOT / "docs" / "experiments" / "raw" / "full-benchmark-solution-v2.csv"
 
 
 def _g_mean(df):
@@ -59,7 +59,7 @@ def per_dataset_wilcoxon_stouffer(df, method_a, method_b, metric="balanced_accur
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", default=None,
-                        help="Path to CSV (default: outputs/full-benchmark-solution.csv)")
+                        help="Path to CSV (default: docs/experiments/raw/full-benchmark-solution-v2.csv)")
     args = parser.parse_args()
 
     output_csv = Path(args.input) if args.input else DEFAULT_CSV

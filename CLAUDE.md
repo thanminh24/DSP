@@ -25,24 +25,24 @@ Zero label modification. OOF confidence scores feed both components — no extra
 
 | File | Purpose |
 |------|---------|
-| `scripts/run_relabeling_viability_sweep.py` | Core sweep dispatcher — all method dispatchers live here |
-| `scripts/run_full_benchmark_solution.py` | Full benchmark runner (all models × methods × protocols × seeds) |
-| `scripts/run_expanded_competitor_headtohead.py` | External comparison vs IW-SMOTE, SMOTE, SW-framework (15 datasets) |
-| `scripts/download_datasets.py` | One-time OpenML download → `data/*.parquet` |
-| `scripts/analyze_full_benchmark.py` | Table 1 analysis (BA, PR-AUC, per-dataset Wilcoxon+Stouffer) |
-| `scripts/analyze_expanded_competitor_headtohead.py` | Table 2 analysis (15-dataset competitor comparison) |
+| `pipeline/experiments/run_relabeling_viability_sweep.py` | Core sweep dispatcher — all method dispatchers live here |
+| `pipeline/experiments/run_full_benchmark_solution.py` | Full benchmark runner (all models × methods × protocols × seeds) |
+| `pipeline/experiments/run_expanded_competitor_headtohead.py` | External comparison vs IW-SMOTE, SMOTE, SW-framework (15 datasets) |
+| `pipeline/experiments/download_datasets.py` | One-time OpenML download → `data/*.parquet` |
+| `pipeline/experiments/analyze_full_benchmark.py` | Table 1 analysis (BA, PR-AUC, per-dataset Wilcoxon+Stouffer) |
+| `pipeline/experiments/analyze_expanded_competitor_headtohead.py` | Table 2 analysis (15-dataset competitor comparison) |
 | `pipeline/data/loaders.py` | Dataset registry; `load_dataset(name) → (X_df, y_binary, cat_cols, feature_names)` |
 | `pipeline/evaluation/metrics.py` | `evaluate()` — cleaning/weighting methods evaluator |
 | `pipeline/evaluation/augment_metrics.py` | `evaluate_augmented()` — synthesis methods evaluator |
 | `pipeline/models/factories.py` | `make_model_factory(model_name, seed, cat_indices, balanced=False)` |
 | `pipeline/baselines/iw_smote.py` | IW-SMOTE baseline; `lamda=30` (original paper default: 100; gated by iw-lamda-sweep) |
-| `docs/paper-draft.md` | Full 8-section paper draft |
-| `docs/results-reference.md` | All key numbers consolidated |
-| `docs/COINS-literature-review.xlsx` | 25-paper literature review (2-sheet xlsx) |
+| `docs/paper/paper-draft.md` | Full 8-section paper draft |
+| `docs/experiments/results-reference.md` | All key numbers consolidated |
+| `docs/research/COINS-literature-review.xlsx` | 25-paper literature review (2-sheet xlsx) |
 
 ## Critical Code Facts
 
-**Self-family OOF scorer (cwms_msbs):** `bal_scores` computed at `run_relabeling_viability_sweep.py:205-207` using `bal_factory = make_model_factory(model_name, ..., balanced=True)` — each model uses its OWN balanced OOF variant. This is already self-family; no new runs needed.
+**Self-family OOF scorer (cwms_msbs):** `bal_scores` computed at `pipeline/experiments/run_relabeling_viability_sweep.py:205-207` using `bal_factory = make_model_factory(model_name, ..., balanced=True)` — each model uses its OWN balanced OOF variant. This is already self-family; no new runs needed.
 
 **Method keys** (all existing, no new dispatchers):
 - `cwms` — line 336: suppression only, no synthesis
@@ -52,12 +52,12 @@ Zero label modification. OOF confidence scores feed both components — no extra
 
 **Dataset loader interface:** `load_dataset(name) -> (X_df, y_binary, cat_cols, feature_names)` — returns parquet-cached data. No live OpenML at experiment time.
 
-**Baseline-only models:** `xgboost` and `calibrated_lr` get `BASELINE_ONLY_METHODS` in `run_full_benchmark_solution.py:29` (`_methods_for()`). Do NOT add cwms/msbs keys for these.
+**Baseline-only models:** `xgboost` and `calibrated_lr` get `BASELINE_ONLY_METHODS` in `pipeline/experiments/run_full_benchmark_solution.py:29` (`_methods_for()`). Do NOT add cwms/msbs keys for these.
 
 **Row count math (15 datasets):**
 - 7 CWMS-full models × 7 methods × 3 protocols × 10 seeds × 15 datasets = 22,050
 - 2 baseline-only models × 3 methods × 3 protocols × 10 seeds × 15 datasets = 2,700
-- **Total: 24,750 rows** ✓ (confirmed in `outputs/full-benchmark-solution-v2.csv`)
+- **Total: 24,750 rows** ✓ (confirmed in `docs/experiments/raw/full-benchmark-solution-v2.csv`)
 
 ## Datasets (15)
 
@@ -68,19 +68,19 @@ All cached in `data/*.parquet`:
 
 | File | Rows | Purpose |
 |------|------|---------|
-| `outputs/COINS-all-results.xlsx` | 49,250 | **All experiments** in one xlsx (9 tabs + README) |
-| `outputs/COINS-all-results.csv` | 49,250 | Same data flat CSV with `experiment` tag column |
-| `outputs/full-benchmark-solution-v2.csv` | 24,750 | Main benchmark — 15 datasets, Table 1 |
-| `outputs/full-benchmark-ir030-solution.csv` | 8,250 | IR=0.30 sensitivity sweep, Table 6 |
-| `outputs/competitor-headtohead-expanded.csv` | 8,100 | External comparison, Table 2 |
-| `outputs/cwms-msbs-deep-sweep.csv` | 4,350 | Deep sweep + oracle reference, Appendix |
-| `outputs/rfet-ablation-sweep.csv` | 1,500 | RF/ET failure-mode ablation |
-| `outputs/scorer-agnosticism-sweep.csv` | 1,250 | Self-family OOF scorer ablation |
-| `outputs/clean-data-ablation.csv` | 400 | Zero-noise ablation |
-| `outputs/failure-mode-sweep.csv` | 400 | Symmetric/reverse-asymmetric noise |
-| `outputs/iw-lamda-sweep.csv` | 250 | IW-SMOTE lambda sensitivity |
+| `docs/experiments/COINS-all-results.xlsx` | 49,250 | **All experiments** in one xlsx (9 tabs + README) |
+| `docs/experiments/COINS-all-results.csv` | 49,250 | Same data flat CSV with `experiment` tag column |
+| `docs/experiments/raw/full-benchmark-solution-v2.csv` | 24,750 | Main benchmark — 15 datasets, Table 1 |
+| `docs/experiments/raw/full-benchmark-ir030-solution.csv` | 8,250 | IR=0.30 sensitivity sweep, Table 6 |
+| `docs/experiments/raw/competitor-headtohead-expanded.csv` | 8,100 | External comparison, Table 2 |
+| `docs/experiments/raw/cwms-msbs-deep-sweep.csv` | 4,350 | Deep sweep + oracle reference, Appendix |
+| `docs/experiments/raw/rfet-ablation-sweep.csv` | 1,500 | RF/ET failure-mode ablation |
+| `docs/experiments/raw/scorer-agnosticism-sweep.csv` | 1,250 | Self-family OOF scorer ablation |
+| `docs/experiments/raw/clean-data-ablation.csv` | 400 | Zero-noise ablation |
+| `docs/experiments/raw/failure-mode-sweep.csv` | 400 | Symmetric/reverse-asymmetric noise |
+| `docs/experiments/raw/iw-lamda-sweep.csv` | 250 | IW-SMOTE lambda sensitivity |
 
-Superseded 5-dataset v1 runs archived in `outputs/archive/superseded-results.tar.gz`.
+Superseded 5-dataset v1 runs archived in `docs/experiments/raw/archive/superseded-results.tar.gz`.
 
 ## Statistical Approach
 
