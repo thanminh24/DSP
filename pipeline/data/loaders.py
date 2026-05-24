@@ -8,20 +8,42 @@ import pandas as pd
 DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data"
 
 DATASETS: dict[str, dict] = {
-    "pima": {"file": "pima.parquet"},
-    "credit-g": {"file": "credit-g.parquet"},
-    "yeast": {"file": "yeast.parquet"},
-    "ecoli": {"file": "ecoli.parquet"},
-    "phoneme": {"file": "phoneme.parquet"},
+    "pima":          {"file": "pima.parquet"},
+    "credit-g":      {"file": "credit-g.parquet"},
+    "yeast":         {"file": "yeast.parquet"},
+    "ecoli":         {"file": "ecoli.parquet"},
+    "phoneme":       {"file": "phoneme.parquet"},
+    "breast_cancer": {"file": "breast_cancer.parquet"},
+    "ilpd":          {"file": "ilpd.parquet"},
+    "blood":         {"file": "blood.parquet"},
+    "haberman":      {"file": "haberman.parquet"},
+    "ionosphere":    {"file": "ionosphere.parquet"},
+    "vehicle_bus":   {"file": "vehicle_bus.parquet"},
+    "glass_float":   {"file": "glass_float.parquet"},
+    "abalone":       {"file": "abalone.parquet"},
+    "spambase":      {"file": "spambase.parquet"},
+    "kc1":           {"file": "kc1.parquet"},
 }
 
 MINORITY_LABELS: dict[str, str] = {
-    "pima": "tested_positive",
-    "credit-g": "bad",
-    "yeast": "MIT",
-    "ecoli": "im",
-    "phoneme": "nasal",
+    "pima":          "tested_positive",
+    "credit-g":      "bad",
+    "yeast":         "MIT",
+    "ecoli":         "im",
+    "phoneme":       "nasal",
+    "breast_cancer": "malignant",
+    "ilpd":          "no_disease",
+    "blood":         "donated",
+    "haberman":      "died",
+    "ionosphere":    "bad",
+    "vehicle_bus":   "bus",
+    "glass_float":   "window_float",
+    "abalone":       "rings_gt_10",
+    "spambase":      "spam",
+    "kc1":           "defective",
 }
+
+ALL_15_DATASETS = list(DATASETS.keys())
 
 TARGET_MINORITY_RATIO = 0.15
 MIN_TO_MAJ_NOISE = 0.30

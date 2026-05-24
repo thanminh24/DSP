@@ -4,6 +4,7 @@ from __future__ import annotations
 import numpy as np
 from sklearn.metrics import (
     accuracy_score,
+    average_precision_score,
     balanced_accuracy_score,
     f1_score,
     precision_score,
@@ -36,6 +37,11 @@ def evaluate_augmented(
       - clean_minority_deletion_rate = NaN
       - extra: n_relabeled, n_synthetic, relabel_correctness
     """
+    if minority_label not in (0, 1):
+        raise ValueError(
+            f"Binary {{0,1}} labels required; got minority_label={minority_label}. "
+            "Remap labels before calling evaluate_augmented()."
+        )
     if len(np.unique(y_train_aug)) < 2:
         return _nan_result(n_relabeled, n_synthetic, relabel_correctness)
     model = model_factory()
@@ -45,6 +51,22 @@ def evaluate_augmented(
         model.fit(X_train_aug, y_train_aug)
     y_pred = model.predict(X_test)
     majority_label = 1 - minority_label
+
+    y_test_binary = (y_test == minority_label).astype(int)
+    if hasattr(model, "predict_proba"):
+        proba = model.predict_proba(X_test)
+        classes = list(model.classes_)
+        min_col = classes.index(minority_label)
+        pr_auc = average_precision_score(y_test_binary, proba[:, min_col])
+    elif hasattr(model, "decision_function"):
+        scores = model.decision_function(X_test)
+        # Binary SVM: positive scores correspond to classes_[1]; negate if minority is classes_[0]
+        if hasattr(model, "classes_") and list(model.classes_).index(minority_label) == 0:
+            scores = -scores
+        pr_auc = average_precision_score(y_test_binary, scores)
+    else:
+        pr_auc = float("nan")
+
     return {
         "deleted": 0,
         "balanced_accuracy": balanced_accuracy_score(y_test, y_pred),
@@ -54,6 +76,7 @@ def evaluate_augmented(
         "minority_recall": recall_score(y_test, y_pred, pos_label=minority_label, zero_division=0),
         "minority_precision": precision_score(y_test, y_pred, pos_label=minority_label, zero_division=0),
         "majority_recall": recall_score(y_test, y_pred, pos_label=majority_label, zero_division=0),
+        "pr_auc": pr_auc,
         "noise_precision_deleted": float("nan"),
         "clean_minority_deletion_rate": float("nan"),
         "n_relabeled": int(n_relabeled),
@@ -74,6 +97,7 @@ def _nan_result(n_relabeled, n_synthetic, relabel_correctness):
         "minority_recall": float("nan"),
         "minority_precision": float("nan"),
         "majority_recall": float("nan"),
+        "pr_auc": float("nan"),
         "noise_precision_deleted": float("nan"),
         "clean_minority_deletion_rate": float("nan"),
         "n_relabeled": int(n_relabeled),
